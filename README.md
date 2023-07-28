@@ -1,2 +1,2 @@
-# mbpo
-Model based policy optimizers
+# Model Based Policy Optimizers
+
