@@ -27,11 +27,12 @@ class PendulumReward(Reward):
                  reward_params: PendulumRewardParams,
                  x_next: chex.Array | None = None) -> Tuple[Distribution, PendulumRewardParams]:
         theta, omega = jnp.arctan2(x[1], x[0]), x[-1]
-        theta = ((theta + jnp.pi) % (2 * jnp.pi)) - jnp.pi
-        angle_cost = reward_params.angle_cost
         target_angle = reward_params.target_angle
+        diff_th = theta - target_angle
+        diff_th = ((diff_th + jnp.pi) % (2 * jnp.pi)) - jnp.pi
+        angle_cost = reward_params.angle_cost
         control_cost = reward_params.control_cost
-        reward = -(angle_cost * (theta - target_angle) ** 2 +
+        reward = -(angle_cost * diff_th ** 2 +
                    0.1 * omega ** 2) - control_cost * u ** 2
         reward = reward.squeeze()
         reward_dist = distrax.Normal(loc=reward, scale=jnp.zeros_like(reward))
