@@ -1,12 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar, Generic, Tuple
+from typing import Generic
 
 import chex
 import jax.numpy as jnp
-from distrax import Distribution
 
-DynamicsParams = TypeVar('DynamicsParams')
-RewardParams = TypeVar('RewardParams')
+from mbpo.systems.dynamics.base_dynamics import Dynamics, DynamicsParams
+from mbpo.systems.rewards.base_rewards import Reward, RewardParams
 
 
 @chex.dataclass
@@ -21,29 +20,6 @@ class SystemOutput(Generic[DynamicsParams, RewardParams]):
     reward: chex.Array
     done: chex.Array = jnp.array(0, dtype=int)
     system_params: SystemParams[DynamicsParams, RewardParams]
-
-
-class Dynamics(ABC, Generic[DynamicsParams]):
-    pass
-
-    @abstractmethod
-    def next_state(self,
-                   x: chex.Array,
-                   u: chex.Array,
-                   dynamics_params: DynamicsParams) -> Tuple[Distribution, DynamicsParams]:
-        pass
-
-
-class Reward(ABC, Generic[RewardParams]):
-    pass
-
-    @abstractmethod
-    def __call__(self,
-                 x: chex.Array,
-                 u: chex.Array,
-                 reward_params: RewardParams,
-                 x_next: chex.Array | None = None) -> Tuple[Distribution, RewardParams]:
-        pass
 
 
 class System(ABC, Generic[DynamicsParams, RewardParams]):
