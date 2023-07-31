@@ -18,6 +18,8 @@ required = [
     'jaxutils',
     'chex',
     'brax>=0.9.1'
+    'trajax @ git+ssh://git@github.com/lenarttreven/trajax.git'
+    'bsm @ git+ssh://git@github.com:lasgroup/bayesian_statistical_models.git'
 ]
 
 extras = {}
