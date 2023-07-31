@@ -7,6 +7,7 @@ import chex
 import jax.numpy as jnp
 from functools import partial
 
+
 class PendulumSystem(System):
     def __init__(self):
         super().__init__(dynamics=PendulumDynamics(), reward=PendulumReward())
@@ -39,13 +40,14 @@ class PendulumSystem(System):
     def reset(self, rng: jnp.ndarray) -> SystemOutput:
         return SystemOutput(
             x_next=jnp.array([-1.0, 0.0, 0.0]),
-            reward=jnp.array([0.0]),
+            reward=jnp.array([0.0]).squeeze(),
             system_params=SystemParams(dynamics_params=PendulumDynamicsParams(), reward_params=PendulumRewardParams()),
         )
 
 
 if __name__ == '__main__':
     import jax.random as random
+
     num_envs = 20
     key = random.PRNGKey(0)
     reset_keys = random.split(key, num_envs + 1)
@@ -56,6 +58,5 @@ if __name__ == '__main__':
     action_key, key = random.split(key, 2)
     actions = random.uniform(key=action_key, shape=(num_envs, 1))
     next_system_state = jax.vmap(system.step)(system_state.x_next, actions, system_state.system_params)
-    chex.assert_shape(next_system_state.reward, (num_envs, ))
+    chex.assert_shape(next_system_state.reward, (num_envs,))
     chex.assert_shape(next_system_state.x_next, (num_envs, 3))
-

@@ -5,11 +5,11 @@ from typing import Tuple
 from distrax import Distribution
 import distrax
 import flax.struct as struct
-
+import jax
 
 @chex.dataclass
 class PendulumDynamicsParams:
-    max_speed: chex.Array = struct.field(default_factory=lambda: jnp.array(9.0))
+    max_speed: chex.Array = struct.field(default_factory=lambda: jnp.array(8.0))
     max_torque: chex.Array = struct.field(default_factory=lambda: jnp.array(2.0))
     dt: chex.Array = struct.field(default_factory=lambda: jnp.array(0.05))
     g: chex.Array = struct.field(default_factory=lambda: jnp.array(9.81))
@@ -52,10 +52,8 @@ class PendulumDynamics(Dynamics):
         m = dynamics_params.m
         l = dynamics_params.l
         dt = dynamics_params.dt
-
         u = jnp.clip(u, -1, 1) * dynamics_params.max_torque
-
-        newthddot = thdot + (3 * g / (2 * l) * jnp.sin(th) + 3.0 / (m * l ** 2) * u)
-        newthdot = newthddot * dt
+        newthddot = (3 * g / (2 * l) * jnp.sin(th) + 3.0 / (m * l ** 2) * u)
+        newthdot = thdot + newthddot * dt
         newthdot = jnp.clip(newthdot, -dynamics_params.max_speed, dynamics_params.max_speed)
         return jnp.asarray([newthdot, newthddot])
