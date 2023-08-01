@@ -22,7 +22,7 @@ class SystemState(Generic[DynamicsParams, RewardParams]):
     x_next: chex.Array
     reward: chex.Array
     system_params: SystemParams[DynamicsParams, RewardParams]
-    done: chex.Array = struct.field(default_factory=lambda: jnp.array(0, dtype=int))
+    done: chex.Array = struct.field(default_factory=lambda: jnp.array(0.0))
 
 
 class System(ABC, Generic[DynamicsParams, RewardParams]):
