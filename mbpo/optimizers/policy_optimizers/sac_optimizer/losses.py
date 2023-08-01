@@ -24,7 +24,7 @@ import jax.numpy as jnp
 from brax.training import types
 from brax.training.types import Params
 
-from mbpo.optimizers.sac_optimizer.sac_networks import SACNetworks
+from mbpo.optimizers.policy_optimizers.sac_optimizer.sac_networks import SACNetworks
 
 Transition = types.Transition
 

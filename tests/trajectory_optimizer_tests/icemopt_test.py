@@ -1,4 +1,4 @@
-from mbpo.trajectory_optimizers import iCemTO, iCemParams
+from mbpo.optimizers import iCemTO, iCemParams
 from mbpo.systems import PendulumSystem
 import jax
 import jax.numpy as jnp
@@ -18,9 +18,9 @@ horizon = 200
 
 def rollout_cem(carry, ins):
     system_state, cem_optimizer_state = carry[0], carry[1]
-    new_cem_optimizer_state = cem_optimizer.optimize(initial_state=system_state.x_next, opt_state=cem_optimizer_state,
-                                                     system_params=system_state.system_params)
-    new_system_state = system.step(x=system_state.x_next, u=new_cem_optimizer_state.action,
+    action, new_cem_optimizer_state = cem_optimizer.act(obs=system_state.x_next, opt_state=cem_optimizer_state,
+                                                        system_params=system_state.system_params)
+    new_system_state = system.step(x=system_state.x_next, u=action,
                                    system_params=system_state.system_params)
 
     carry = [new_system_state, new_cem_optimizer_state]
