@@ -8,7 +8,8 @@ import jax.numpy as jnp
 from functools import partial
 from typing import NamedTuple
 from mbpo.utils.trajectory_optimizer_utils import rollout_actions
-from mbpo.systems.base_systems import System, SystemParams
+from mbpo.systems.base_systems import SystemParams
+from mbpo.optimizers.base_optimizer import BaseOptimizer
 
 
 @partial(jax.jit, static_argnums=(0, 1, 3))
@@ -172,20 +173,19 @@ class iCemOptimizerState:
         return self.best_sequence[0]
 
 
-class iCemTO:
+class iCemTO(BaseOptimizer):
     def __init__(self,
                  horizon: int,
                  action_dim: int,
-                 system: System,
                  key: jax.random.PRNGKey = jax.random.PRNGKey(0),
                  opt_params: iCemParams = iCemParams(),
                  *args,
                  **kwargs):
+        super().__init__(*args, **kwargs)
         self.horizon = horizon
         self.opt_params = opt_params
         self.key = key
         self.opt_dim = (horizon,) + (action_dim, )
-        self.system = system
 
     def initialize_optimizer(self):
         init_key, key = jax.random.split(self.key, 2)
@@ -198,7 +198,7 @@ class iCemTO:
     @partial(jax.jit, static_argnums=0)
     def optimize(
             self,
-            initial_state: jax.Array,
+            initial_state: chex.Array,
             opt_state: iCemOptimizerState,
             system_params: SystemParams,
     ):
@@ -278,6 +278,10 @@ class iCemTO:
         carry, outs = jax.lax.scan(step, carry, xs=None, length=self.opt_params.num_steps)
         new_opt_state = new_opt_state.replace(best_sequence=outs[1][-1, ...], best_reward=outs[0][-1, ...])
         return new_opt_state
+
+    def act(self, obs: chex.Array, opt_state: iCemOptimizerState, system_params: SystemParams):
+        new_opt_state = self.optimize(initial_state=obs, opt_state=opt_state, system_params=system_params)
+        return new_opt_state.action, new_opt_state
 
 
 if __name__ == "__main__":
