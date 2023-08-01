@@ -1,13 +1,12 @@
 import jax.numpy as jnp
 import jax.random as jr
 import jax.tree_util as jtu
-import wandb
 from brax.training.replay_buffers import UniformSamplingQueue
 from brax.training.types import Transition
 from jax import jit
 from jax.lax import scan
 
-from mbpo.optimizers.sac_optimizer.sac import SAC
+from mbpo.optimizers.policy_optimizers.sac_optimizer.sac import SAC
 from mbpo.systems import PendulumSystem
 from mbpo.systems.brax_wrapper import BraxWrapper
 
@@ -39,10 +38,6 @@ state = jit(env.reset)(rng=jr.PRNGKey(0))
 # There is a tradeoff between num_envs, grad_updates_per_step and num_env_steps_between_updates
 # grad_updates_per_step should be roughly equal to num_envs * num_env_steps_between_updates
 
-wandb.init(
-    project="Pendulum test MBPO",
-    group='test group',
-)
 
 sac_trainer = SAC(
     environment=env,
@@ -50,7 +45,7 @@ sac_trainer = SAC(
     episode_length=200, normalize_observations=True, action_repeat=1,
     discounting=0.99, lr_policy=3e-4, lr_alpha=3e-4, lr_q=3e-4, num_envs=32,
     batch_size=64, grad_updates_per_step=20 * 32, max_replay_size=2 ** 14, min_replay_size=2 ** 7, num_eval_envs=1,
-    deterministic_eval=True, tau=0.005, wd_policy=0, wd_q=0, wd_alpha=0, wandb_logging=True,
+    deterministic_eval=True, tau=0.005, wd_policy=0, wd_q=0, wd_alpha=0, wandb_logging=False,
     num_env_steps_between_updates=20, policy_hidden_layer_sizes=(128, 128, 128),
     critic_hidden_layer_sizes=(128, 128, 128),
 )
