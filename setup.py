@@ -17,9 +17,10 @@ required = [
     'argparse-dataclass>=0.2.1',
     'jaxutils',
     'chex',
-    'brax>=0.9.1'
+    'brax @ git+ssh://git@github.com/lenarttreven/brax.git'
     'trajax @ git+ssh://git@github.com/lenarttreven/trajax.git'
     'bsm @ git+ssh://git@github.com:lasgroup/bayesian_statistical_models.git'
+
 ]
 
 extras = {}

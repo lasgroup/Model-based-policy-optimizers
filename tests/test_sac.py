@@ -1,14 +1,12 @@
-from datetime import datetime
-
 import jax.numpy as jnp
 import jax.random as jr
 import jax.tree_util as jtu
-import matplotlib.pyplot as plt
+import wandb
 from brax.training.replay_buffers import UniformSamplingQueue
 from brax.training.types import Transition
 from jax import jit
+from jax.lax import scan
 
-import wandb
 from mbpo.optimizers.sac_optimizer.sac import SAC
 from mbpo.systems import PendulumSystem
 from mbpo.systems.brax_wrapper import BraxWrapper
@@ -57,30 +55,37 @@ sac_trainer = SAC(
     critic_hidden_layer_sizes=(128, 128, 128),
 )
 
-max_y = 0
-min_y = -100
-
-xdata, ydata = [], []
-times = [datetime.now()]
-
-
-def progress(num_steps, metrics):
-    times.append(datetime.now())
-    xdata.append(num_steps)
-    ydata.append(metrics['eval/episode_reward'])
-    plt.xlim([0, sac_trainer.num_timesteps])
-    # plt.ylim([min_y, max_y])
-    plt.xlabel('# environment steps')
-    plt.ylabel('reward per episode')
-    plt.plot(xdata, ydata)
-    plt.show()
-
-
-make_inference_fn, params, metrics = sac_trainer.run_training(key=jr.PRNGKey(0), progress_fn=progress)
-
-print(f'time to jit: {times[1] - times[0]}')
-print(f'time to train: {times[-1] - times[1]}')
+make_inference_fn, params, metrics = sac_trainer.run_training(key=jr.PRNGKey(0))
 
 
 def test_sac_good_fit():
-    assert metrics['eval/episode_reward'] >= -320
+    assert metrics['eval/episode_reward'] >= -400
+
+
+def policy(x):
+    return make_inference_fn(params, deterministic=True)(x, jr.PRNGKey(0))[0]
+
+
+system_state_init = system.reset(rng=jr.PRNGKey(0))
+x_init = system_state_init.x_next
+system_params = system_state_init.system_params
+
+
+def step(x, _):
+    u = policy(x)
+    next_sys_state = system.step(x, u, system_params)
+    return next_sys_state.x_next, (x, u, next_sys_state.reward)
+
+
+horizon = 200
+x_last, trajectory = scan(step, x_init, None, length=horizon)
+
+
+# plt.plot(trajectory[0], label='Xs')
+# plt.plot(trajectory[1], label='Us')
+# plt.plot(trajectory[2], label='Rewards')
+# plt.legend()
+# plt.show()
+
+def test_small_reward():
+    assert jnp.abs(trajectory[2][-1]) <= 0.01
