@@ -8,7 +8,9 @@ RewardParams = TypeVar('RewardParams')
 
 
 class Reward(ABC, Generic[RewardParams]):
-    pass
+    def __init__(self, x_dim: int, u_dim: int):
+        self.x_dim = x_dim
+        self.u_dim = u_dim
 
     @abstractmethod
     def __call__(self,

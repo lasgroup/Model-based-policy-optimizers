@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import TypeVar, Generic, Tuple
+from typing import TypeVar, Generic, Tuple, Dict, Any
 
+from flax import struct
 import chex
 import jax.numpy as jnp
 from distrax import Distribution
@@ -16,11 +17,13 @@ class SystemParams(Generic[DynamicsParams, RewardParams]):
 
 
 @chex.dataclass
-class SystemOutput(Generic[DynamicsParams, RewardParams]):
+class SystemState(Generic[DynamicsParams, RewardParams]):
     x_next: chex.Array
     reward: chex.Array
     done: chex.Array = jnp.array(0, dtype=int)
     system_params: SystemParams[DynamicsParams, RewardParams]
+    metrics: Dict[str, chex.Array] = struct.field(default_factory=dict)
+    info: Dict[str, Any] = struct.field(default_factory=dict)
 
 
 class Dynamics(ABC, Generic[DynamicsParams]):
@@ -55,7 +58,7 @@ class System(ABC, Generic[DynamicsParams, RewardParams]):
              x: chex.Array,
              u: chex.Array,
              system_params: SystemParams[DynamicsParams, RewardParams],
-             ) -> SystemOutput:
+             ) -> SystemState:
         """
 
         :param x: current state of the system
@@ -66,5 +69,5 @@ class System(ABC, Generic[DynamicsParams, RewardParams]):
         pass
 
     @abstractmethod
-    def reset(self, rng: jnp.ndarray) -> SystemOutput:
+    def reset(self, rng: jnp.ndarray) -> SystemState:
         pass
