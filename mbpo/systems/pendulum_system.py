@@ -40,8 +40,7 @@ class PendulumSystem(System[PendulumDynamicsParams, PendulumRewardParams]):
 
     def reset(self, rng: jnp.ndarray) -> SystemState:
         return SystemState(
-            x_next=jnp.array([jnp.pi, 0.0, 0.0]),
-            # x_next=jnp.array([-1.0, 0.0, 0.0]),
+            x_next=jnp.array([-1.0, 0.0, 0.0]),
             reward=jnp.array([0.0]).squeeze(),
             system_params=SystemParams(dynamics_params=PendulumDynamicsParams(), reward_params=PendulumRewardParams()),
         )
