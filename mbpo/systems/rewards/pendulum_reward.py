@@ -1,10 +1,12 @@
-from mbpo.systems.rewards.base_rewards import Reward, RewardParams
-import chex
-import jax.numpy as jnp
 from typing import Tuple
-from distrax import Distribution
+
+import chex
 import distrax
 import flax.struct as struct
+import jax.numpy as jnp
+from distrax import Distribution
+
+from mbpo.systems.rewards.base_rewards import Reward
 
 
 @chex.dataclass
@@ -14,12 +16,13 @@ class PendulumRewardParams:
     target_angle: chex.Array = struct.field(default_factory=lambda: jnp.array(0.0))
 
 
-class PendulumReward(Reward):
+class PendulumReward(Reward[PendulumRewardParams]):
 
     def __init__(self):
-        super().__init__()
-        self.state_dim = 3
-        self.input_dim = 1
+        super().__init__(x_dim=3, u_dim=1)
+
+    def init_params(self, key: chex.PRNGKey) -> PendulumRewardParams:
+        return PendulumRewardParams()
 
     def __call__(self,
                  x: chex.Array,

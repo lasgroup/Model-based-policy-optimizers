@@ -18,3 +18,7 @@ class Dynamics(ABC, Generic[DynamicsParams]):
                    u: chex.Array,
                    dynamics_params: DynamicsParams) -> Tuple[Distribution, DynamicsParams]:
         pass
+
+    @abstractmethod
+    def init_params(self, key: chex.PRNGKey) -> DynamicsParams:
+        pass

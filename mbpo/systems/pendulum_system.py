@@ -1,14 +1,15 @@
-import jax.random
-
-from mbpo.systems.dynamics.pendulum_dynamics import PendulumDynamics, PendulumDynamicsParams
-from mbpo.systems.rewards.pendulum_reward import PendulumReward, PendulumRewardParams
-from mbpo.systems.base_systems import System, SystemOutput, SystemParams
-import chex
-import jax.numpy as jnp
 from functools import partial
 
+import chex
+import jax.numpy as jnp
+import jax.random
 
-class PendulumSystem(System):
+from mbpo.systems.base_systems import System, SystemParams, SystemState
+from mbpo.systems.dynamics.pendulum_dynamics import PendulumDynamics, PendulumDynamicsParams
+from mbpo.systems.rewards.pendulum_reward import PendulumReward, PendulumRewardParams
+
+
+class PendulumSystem(System[PendulumDynamicsParams, PendulumRewardParams]):
     def __init__(self):
         super().__init__(dynamics=PendulumDynamics(), reward=PendulumReward())
         self.min_action = -1.0
@@ -19,7 +20,7 @@ class PendulumSystem(System):
              x: chex.Array,
              u: chex.Array,
              system_params: SystemParams,
-             ) -> SystemOutput:
+             ) -> SystemState:
         """
 
         :param x: current state of the system
@@ -31,14 +32,14 @@ class PendulumSystem(System):
         x_next = x_nex_dist.mean()
         reward_dist, new_reward_params = self.reward(x, u, system_params.reward_params, x_next)
         reward = reward_dist.mean()
-        return SystemOutput(
+        return SystemState(
             x_next=x_next,
             reward=reward,
             system_params=SystemParams(dynamics_params=new_dynamics_params, reward_params=new_reward_params),
         )
 
-    def reset(self, rng: jnp.ndarray) -> SystemOutput:
-        return SystemOutput(
+    def reset(self, rng: jnp.ndarray) -> SystemState:
+        return SystemState(
             x_next=jnp.array([-1.0, 0.0, 0.0]),
             reward=jnp.array([0.0]).squeeze(),
             system_params=SystemParams(dynamics_params=PendulumDynamicsParams(), reward_params=PendulumRewardParams()),

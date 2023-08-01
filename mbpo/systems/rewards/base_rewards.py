@@ -19,3 +19,7 @@ class Reward(ABC, Generic[RewardParams]):
                  reward_params: RewardParams,
                  x_next: chex.Array | None = None) -> Tuple[Distribution, RewardParams]:
         pass
+
+    @abstractmethod
+    def init_params(self, key: chex.PRNGKey) -> RewardParams:
+        pass

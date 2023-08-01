@@ -6,6 +6,7 @@ from brax import envs
 from brax.training.replay_buffers import UniformSamplingQueue, ReplayBufferState
 from flax import struct
 import jax.numpy as jnp
+import jax.random as jr
 
 from mbpo.systems.base_systems import System
 from mbpo.systems.base_systems import SystemParams, DynamicsParams, RewardParams
@@ -35,16 +36,18 @@ class BraxWrapper(envs.Env):
         self.sample_buffer = sample_buffer
 
     def reset(self, rng: chex.Array) -> State:
-        cur_buffer_state = self.sample_buffer_state.replace(key=rng)
+        keys = jr.split(rng, 2)
+        cur_buffer_state = self.sample_buffer_state.replace(key=keys[0])
         _, sample = self.sample_buffer.sample(cur_buffer_state)
         # Todo: here we need to sync the sample to the new state
         #       the only thing that we sample is the observation
+        init_system_params = self.system.init_params(keys[1])
         reward, done = jnp.array(0.0), jnp.array(0.0)
         new_state = State(pipeline_state=None,
                           obs=sample.obs,
                           reward=reward,
                           done=done,
-                          system_params=sample.system_params)
+                          system_params=init_system_params)
         return new_state
 
     def step(self, state: State, action: chex.Array) -> State:

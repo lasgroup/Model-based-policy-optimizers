@@ -2,19 +2,19 @@ from abc import ABC
 from typing import Generic
 
 import chex
+import flax.struct as struct
 import jax.numpy as jnp
-import jax.random
+import jax.random as jr
 
 from mbpo.systems.dynamics.base_dynamics import Dynamics, DynamicsParams
 from mbpo.systems.rewards.base_rewards import Reward, RewardParams
-import flax.struct as struct
 
 
 @chex.dataclass
 class SystemParams(Generic[DynamicsParams, RewardParams]):
     dynamics_params: DynamicsParams
     reward_params: RewardParams
-    key: jax.random.PRNGKey = struct.field(default_factory=lambda: jax.random.PRNGKey(0))
+    key: chex.PRNGKey = struct.field(default_factory=lambda: jr.PRNGKey(0))
 
 
 @chex.dataclass
@@ -45,3 +45,11 @@ class System(ABC, Generic[DynamicsParams, RewardParams]):
         :return: Tuple of next state, reward, updated system parameters
         """
         pass
+
+    def init_params(self, key: chex.PRNGKey) -> SystemParams[DynamicsParams, RewardParams]:
+        keys = jr.split(key, 3)
+        return SystemParams(
+            dynamics_params=self.dynamics.init_params(keys[0]),
+            reward_params=self.reward.init_params(keys[1]),
+            key=keys[2],
+        )
