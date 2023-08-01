@@ -17,9 +17,9 @@ required = [
     'argparse-dataclass>=0.2.1',
     'jaxutils',
     'chex',
-    'brax @ git+ssh://git@github.com:lenarttreven/brax.git',
-    'trajax @ git+ssh://git@github.com:lenarttreven/trajax.git',
-    'bsm @ git+ssh://git@github.com:lasgroup/bayesian_statistical_models.git',
+    'brax @ git+https://git@github.com:lenarttreven/brax.git',
+    'trajax @ git+https://git@github.com:lenarttreven/trajax.git',
+    'bsm @ git+https://git@github.com:lasgroup/bayesian_statistical_models.git',
 
 ]
 
