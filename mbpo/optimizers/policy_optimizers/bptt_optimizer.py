@@ -4,7 +4,7 @@ import distrax
 import jax
 import jax.numpy as jnp
 import flax.linen as nn
-from bsm.utils.network_utils import MLP
+from mbpo.utils.network_utils import MLP
 import chex
 from mbpo.optimizers.base_optimizer import BaseOptimizer
 from mbpo.systems import SystemParams

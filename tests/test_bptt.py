@@ -1,10 +1,8 @@
 import jax.numpy as jnp
 import jax.random
 import jax.random as jr
-import jax.tree_util as jtu
 from brax.training.replay_buffers import UniformSamplingQueue
 from brax.training.types import Transition
-from jax import jit
 from jax.lax import scan
 
 from mbpo.optimizers.policy_optimizers.bptt_optimizer import BPTTOptimizer
