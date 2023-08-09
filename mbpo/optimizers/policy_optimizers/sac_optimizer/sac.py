@@ -10,6 +10,7 @@ import jax.numpy as jnp
 import jax.random as jr
 import jax.tree_util as jtu
 import optax
+import wandb
 from brax import envs
 from brax.training import acting
 from brax.training import networks
@@ -23,7 +24,6 @@ from jax import jit
 from jax.lax import scan
 from jaxtyping import PyTree
 
-import wandb
 from mbpo.optimizers.policy_optimizers.sac_optimizer.losses import SACLosses
 from mbpo.optimizers.policy_optimizers.sac_optimizer.sac_networks import SACNetworksModel, make_inference_fn
 from mbpo.optimizers.policy_optimizers.sac_optimizer.utils import gradient_update_fn, metrics_to_float
@@ -421,4 +421,4 @@ class SAC:
         # devices.
         if self.wandb_logging:
             wandb.log(metrics_to_float({'total steps': total_steps}))
-        return self.make_policy, params, metrics
+        return params, metrics

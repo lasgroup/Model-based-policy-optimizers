@@ -5,7 +5,7 @@ import chex
 from mbpo.systems.base_systems import System, SystemParams
 
 
-class BaseOptimizer(ABC, Generic[OptimizerState]):
+class BaseOptimizer(ABC, Generic[OptimizerState, OptimizerTrainingOutPut]):
     def __init__(self, system: System):
         self.system = system
         pass

@@ -31,11 +31,13 @@ class State:
 class BraxWrapper(envs.Env):
     def __init__(self,
                  system: System,
+                 system_params: SystemParams,
                  sample_buffer_state: ReplayBufferState,
                  sample_buffer: UniformSamplingQueue):
         self.system = system
         self.sample_buffer_state = sample_buffer_state
         self.sample_buffer = sample_buffer
+        self.init_system_params = system_params
 
     def reset(self, rng: chex.Array) -> State:
         keys = jr.split(rng, 2)
@@ -43,7 +45,7 @@ class BraxWrapper(envs.Env):
         sample: Transition
         _, sample = self.sample_buffer.sample(cur_buffer_state)
         sample = jtu.tree_map(lambda x: x[0], sample)
-        init_system_params = self.system.init_params(keys[1])
+        init_system_params = self.init_system_params
         reward, done = sample.reward, jnp.array(0.0)
         new_state = State(pipeline_state=None,
                           obs=sample.observation,

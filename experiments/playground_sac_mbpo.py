@@ -1,10 +1,12 @@
 import jax.numpy as jnp
 import jax.random as jr
 import jax.tree_util as jtu
+import matplotlib.pyplot as plt
 from brax.training.replay_buffers import UniformSamplingQueue
 from brax.training.types import Transition
 from jax.lax import scan
 
+import wandb
 from mbpo.optimizers.policy_optimizers.model_based_sac import ModelBasedSac
 from mbpo.systems import PendulumSystem
 
@@ -35,7 +37,7 @@ optimizer = ModelBasedSac(system=system,
                           discounting=0.99, lr_policy=3e-4, lr_alpha=3e-4, lr_q=3e-4, num_envs=32,
                           batch_size=64, grad_updates_per_step=20 * 32, max_replay_size=2 ** 14, min_replay_size=2 ** 7,
                           num_eval_envs=1,
-                          deterministic_eval=True, tau=0.005, wd_policy=0, wd_q=0, wd_alpha=0, wandb_logging=False,
+                          deterministic_eval=True, tau=0.005, wd_policy=0, wd_q=0, wd_alpha=0, wandb_logging=True,
                           num_env_steps_between_updates=20, policy_hidden_layer_sizes=(128, 128, 128),
                           critic_hidden_layer_sizes=(128, 128, 128),
                           )
@@ -43,6 +45,10 @@ optimizer = ModelBasedSac(system=system,
 # There is a tradeoff between num_envs, grad_updates_per_step and num_env_steps_between_updates
 # grad_updates_per_step should be roughly equal to num_envs * num_env_steps_between_updates
 
+wandb.init(
+    project="Pendulum test MBPO",
+    group='test group',
+)
 init_optimizer_state = optimizer.init(key=jr.PRNGKey(0),
                                       true_buffer_state=sampling_buffer_state)
 
@@ -65,10 +71,8 @@ x_init = system_state_init.x_next
 horizon = 200
 x_last, trajectory = scan(step, x_init, None, length=horizon)
 
-
-def test_sac_good_fit():
-    assert metrics['eval/episode_reward'] >= -400
-
-
-def test_small_reward():
-    assert jnp.abs(trajectory[2][-1]) <= 0.1
+plt.plot(trajectory[0], label='Xs')
+plt.plot(trajectory[1], label='Us')
+plt.plot(trajectory[2], label='Rewards')
+plt.legend()
+plt.show()
