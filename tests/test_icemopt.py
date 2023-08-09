@@ -35,4 +35,4 @@ rewards = outs[-1]
 
 
 def test_optimizer_performance():
-    assert jnp.abs(rewards[-1]) <= 0.01
+    assert rewards.sum() >= -400

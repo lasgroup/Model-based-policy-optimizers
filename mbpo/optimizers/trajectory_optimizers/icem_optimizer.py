@@ -7,7 +7,7 @@ import jax
 import jax.numpy as jnp
 from functools import partial
 from typing import NamedTuple
-from mbpo.utils.trajectory_optimizer_utils import rollout_actions
+from mbpo.utils.optimizer_utils import rollout_actions
 from mbpo.systems.base_systems import SystemParams
 from mbpo.optimizers.base_optimizer import BaseOptimizer
 
@@ -279,7 +279,7 @@ class iCemTO(BaseOptimizer):
         new_opt_state = new_opt_state.replace(best_sequence=outs[1][-1, ...], best_reward=outs[0][-1, ...])
         return new_opt_state
 
-    def act(self, obs: chex.Array, opt_state: iCemOptimizerState, system_params: SystemParams):
+    def act(self, obs: chex.Array, opt_state: iCemOptimizerState, system_params: SystemParams, evaluate: bool = True):
         new_opt_state = self.optimize(initial_state=obs, opt_state=opt_state, system_params=system_params)
         return new_opt_state.action, new_opt_state
 
