@@ -19,7 +19,7 @@ required = [
     'chex',
     'brax @ git+https://git@github.com/lenarttreven/brax.git',
     'trajax @ git+https://git@github.com/lenarttreven/trajax.git',
-    # 'bsm @ git+https://git@github.com/lasgroup/bayesian_statistical_models.git',
+    'bsm @ git+https://git@github.com/lasgroup/bayesian_statistical_models.git',
 ]
 
 extras = {}
