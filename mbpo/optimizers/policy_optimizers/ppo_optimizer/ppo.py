@@ -280,7 +280,7 @@ class PPO:
         # Run initial eval
         metrics = {}
         if self.num_evals > 1:
-            metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.policy_params),
+            metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.params.policy),
                                                training_metrics={})
             if self.wandb_logging:
                 wandb.log(metrics_to_float(metrics))
@@ -302,7 +302,7 @@ class PPO:
 
             # Eval and logging
             # Run evals.
-            metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.policy_params),
+            metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.params.policy),
                                                training_metrics)
             if self.wandb_logging:
                 wandb.log(metrics_to_float(metrics))
@@ -310,7 +310,7 @@ class PPO:
 
         total_steps = current_step
         assert total_steps >= self.num_timesteps
-        params = (training_state.normalizer_params, training_state.policy_params)
+        params = (training_state.normalizer_params, training_state.params.policy)
 
         # If there were no mistakes the training_state should still be identical on all
         # devices.
