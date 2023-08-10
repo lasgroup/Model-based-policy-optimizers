@@ -1,24 +1,26 @@
-from typing import Union, Callable, Sequence, Tuple, Any, Optional
-from jaxtyping import PyTree
+import functools
+import math
+from copy import deepcopy
+from typing import Union, Callable, Sequence, Tuple, Any
+
+import chex
 import distrax
+import flax.linen as nn
+import flax.struct as struct
 import jax
 import jax.numpy as jnp
-import flax.linen as nn
-from mbpo.utils.network_utils import MLP
-import chex
-from mbpo.optimizers.base_optimizer import BaseOptimizer
-from mbpo.systems import SystemParams
+import optax
+from brax.training import networks
+from brax.training.replay_buffers import ReplayBufferState, UniformSamplingQueue
 from brax.training.types import Transition
 from jax import flatten_util
-from brax.training.replay_buffers import ReplayBufferState, UniformSamplingQueue
-import optax
-from copy import deepcopy
-import flax.struct as struct
-import functools
-from mbpo.utils.optimizer_utils import rollout_policy, lambda_return, soft_update
-import math
+from jaxtyping import PyTree
 from optax import l2_loss
-from brax.training import networks
+
+from mbpo.optimizers.base_optimizer import BaseOptimizer
+from mbpo.systems import SystemParams
+from mbpo.utils.network_utils import MLP
+from mbpo.utils.optimizer_utils import rollout_policy, lambda_return, soft_update
 
 EPS = 1e-8
 
