@@ -1,7 +1,8 @@
-from typing import Tuple
+from typing import Tuple, List
 
 import chex
 import jax.random as jr
+from brax.training import types
 from brax.training.replay_buffers import UniformSamplingQueue, ReplayBufferState
 from jaxtyping import PyTree
 
@@ -17,6 +18,12 @@ class SACMBState:
     true_buffer_state: ReplayBufferState
     policy_params: PyTree
     key: chex.PRNGKey
+
+
+@chex.dataclass
+class SACOutput:
+    sac_state: SACMBState
+    sac_summary: List[types.Metrics]
 
 
 class ModelBasedSac(BaseOptimizer[SACMBState, SACMBState]):
@@ -54,13 +61,14 @@ class ModelBasedSac(BaseOptimizer[SACMBState, SACMBState]):
             evaluate: bool = True) -> Tuple[chex.Array, SACMBState]:
         policy = self.make_policy(opt_state.policy_params, evaluate)
         # TODO: key should be passed to act?
-        action = policy(obs, opt_state.key)[0]
-        return action, opt_state
+        key, subkey = jr.split(opt_state.key)
+        action = policy(obs, subkey)[0]
+        return action, opt_state.replace(key=key)
 
     def train(self,
               opt_state: SACMBState,
               *args,
-              **kwargs) -> SACMBState:
+              **kwargs) -> SACOutput:
         env = BraxWrapper(system=self.system,
                           system_params=opt_state.system_params,
                           sample_buffer_state=opt_state.true_buffer_state,
@@ -70,4 +78,4 @@ class ModelBasedSac(BaseOptimizer[SACMBState, SACMBState]):
         key, new_key = jr.split(opt_state.key)
         policy_params, metrics = sac_trainer.run_training(key=new_key)
         new_opt_state = opt_state.replace(policy_params=policy_params, key=new_key)
-        return new_opt_state, metrics
+        return SACOutput(sac_state=new_opt_state, sac_summary=metrics)

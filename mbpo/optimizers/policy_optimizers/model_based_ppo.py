@@ -1,7 +1,8 @@
-from typing import Tuple
+from typing import Tuple, List
 
 import chex
 import jax.random as jr
+from brax.training import types
 from brax.training.replay_buffers import UniformSamplingQueue, ReplayBufferState
 from jaxtyping import PyTree
 
@@ -17,6 +18,12 @@ class PPOMBState:
     true_buffer_state: ReplayBufferState
     policy_params: PyTree
     key: chex.PRNGKey
+
+
+@chex.dataclass
+class PPOOutput:
+    ppo_state: PPOMBState
+    ppo_summary: List[types.Metrics]
 
 
 class ModelBasedPPO(BaseOptimizer[PPOMBState, PPOMBState]):
@@ -54,13 +61,14 @@ class ModelBasedPPO(BaseOptimizer[PPOMBState, PPOMBState]):
             evaluate: bool = True) -> Tuple[chex.Array, PPOMBState]:
         policy = self.make_policy(opt_state.policy_params, evaluate)
         # TODO: key should be passed to act?
-        action = policy(obs, opt_state.key)[0]
-        return action, opt_state
+        key, subkey= jr.split(opt_state.key)
+        action = policy(obs, subkey)[0]
+        return action, opt_state.replace(key=key)
 
     def train(self,
               opt_state: PPOMBState,
               *args,
-              **kwargs) -> PPOMBState:
+              **kwargs) -> PPOOutput:
         env = BraxWrapper(system=self.system,
                           system_params=opt_state.system_params,
                           sample_buffer_state=opt_state.true_buffer_state,
@@ -70,4 +78,4 @@ class ModelBasedPPO(BaseOptimizer[PPOMBState, PPOMBState]):
         key, new_key = jr.split(opt_state.key)
         policy_params, metrics = sac_trainer.run_training(key=new_key)
         new_opt_state = opt_state.replace(policy_params=policy_params, key=new_key)
-        return new_opt_state, metrics
+        return PPOOutput(ppo_state=new_opt_state, ppo_summary=metrics)

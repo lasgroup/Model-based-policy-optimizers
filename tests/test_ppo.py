@@ -62,16 +62,16 @@ optimizer = ModelBasedPPO(system=system,
 init_optimizer_state = optimizer.init(key=jr.PRNGKey(0),
                                       true_buffer_state=sampling_buffer_state)
 
-final_opt_state, metrics = optimizer.train(opt_state=init_optimizer_state)
+ppo_output = optimizer.train(opt_state=init_optimizer_state)
 
 
 def policy(x):
-    return optimizer.act(x, final_opt_state, final_opt_state.system_params, evaluate=False)
+    return optimizer.act(x, ppo_output.ppo_state, ppo_output.ppo_state.system_params, evaluate=False)
 
 
 def step(x, _):
     u = policy(x)[0]
-    next_sys_state = system.step(x, u, final_opt_state.system_params)
+    next_sys_state = system.step(x, u, ppo_output.ppo_state.system_params)
     return next_sys_state.x_next, (x, u, next_sys_state.reward)
 
 
@@ -83,7 +83,7 @@ x_last, trajectory = scan(step, x_init, None, length=horizon)
 
 
 def test_sac_good_fit():
-    assert metrics['eval/episode_reward'] >= -400
+    assert ppo_output.ppo_summary[-1]['eval/episode_reward'] >= -400
 
 
 def test_small_reward():

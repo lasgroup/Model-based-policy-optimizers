@@ -278,12 +278,15 @@ class PPO:
             key=eval_key)
 
         # Run initial eval
+        all_metrics = []
         metrics = {}
         if self.num_evals > 1:
             metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.params.policy),
                                                training_metrics={})
+            float_metrics = metrics_to_float(metrics)
             if self.wandb_logging:
-                wandb.log(metrics_to_float(metrics))
+                wandb.log(float_metrics)
+            all_metrics.append(float_metrics)
             progress_fn(0, metrics)
 
         # Create and initialize the replay buffer.
@@ -304,8 +307,10 @@ class PPO:
             # Run evals.
             metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.params.policy),
                                                training_metrics)
+            float_metrics = metrics_to_float(metrics)
             if self.wandb_logging:
-                wandb.log(metrics_to_float(metrics))
+                wandb.log(float_metrics)
+            all_metrics.append(float_metrics)
             progress_fn(current_step, metrics)
 
         total_steps = current_step
@@ -316,4 +321,4 @@ class PPO:
         # devices.
         if self.wandb_logging:
             wandb.log(metrics_to_float({'total steps': total_steps}))
-        return params, metrics
+        return params, all_metrics
