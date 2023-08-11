@@ -1,31 +1,14 @@
-from typing import Any, Dict, Optional
-
 import chex
 import jax.numpy as jnp
 import jax.random as jr
 import jax.tree_util as jtu
-from brax import base
 from brax import envs
 from brax.training.replay_buffers import UniformSamplingQueue, ReplayBufferState
 from brax.training.types import Transition
-from flax import struct
 
+from mbpo.optimizers.policy_optimizers.brax_utils.base import State
 from mbpo.systems.base_systems import System
-from mbpo.systems.base_systems import SystemParams, DynamicsParams, RewardParams
-
-
-@chex.dataclass
-class State:
-    """ Environment state for training and inference.
-        We create a new state so that we can carry also system parameters."""
-
-    pipeline_state: Optional[base.State]
-    obs: chex.Array
-    reward: chex.Array
-    done: chex.Array
-    system_params: SystemParams[DynamicsParams, RewardParams]
-    metrics: Dict[str, chex.Array] = struct.field(default_factory=dict)
-    info: Dict[str, Any] = struct.field(default_factory=dict)
+from mbpo.systems.base_systems import SystemParams
 
 
 class BraxWrapper(envs.Env):
@@ -38,6 +21,7 @@ class BraxWrapper(envs.Env):
         self.sample_buffer_state = sample_buffer_state
         self.sample_buffer = sample_buffer
         self.init_system_params = system_params
+        self.system_params_vmap_axes = self.system.system_params_vmap_axes
 
     def reset(self, rng: chex.Array) -> State:
         keys = jr.split(rng, 2)

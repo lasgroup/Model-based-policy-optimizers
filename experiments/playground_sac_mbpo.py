@@ -52,16 +52,16 @@ wandb.init(
 init_optimizer_state = optimizer.init(key=jr.PRNGKey(0),
                                       true_buffer_state=sampling_buffer_state)
 
-final_opt_state, metrics = optimizer.train(opt_state=init_optimizer_state)
+sac_output = optimizer.train(opt_state=init_optimizer_state)
 
 
 def policy(x):
-    return optimizer.act(x, final_opt_state, final_opt_state.system_params, evaluate=False)
+    return optimizer.act(x, sac_output.state, sac_output.state.system_params, evaluate=False)
 
 
 def step(x, _):
     u = policy(x)[0]
-    next_sys_state = system.step(x, u, final_opt_state.system_params)
+    next_sys_state = system.step(x, u, sac_output.state.system_params)
     return next_sys_state.x_next, (x, u, next_sys_state.reward)
 
 

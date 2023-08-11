@@ -20,6 +20,7 @@ from brax.training.types import Params
 from jax.lax import scan
 from jaxtyping import PyTree
 
+from mbpo.optimizers.policy_optimizers.brax_utils.training import wrap as wrap_for_training
 from mbpo.optimizers.policy_optimizers.ppo.losses import PPOLoss, PPONetworkParams
 from mbpo.optimizers.policy_optimizers.ppo.ppo_network import PPONetworksModel, make_inference_fn
 from mbpo.optimizers.policy_optimizers.sac.utils import gradient_update_fn, metrics_to_float
@@ -103,7 +104,6 @@ class PPO:
             num_timesteps / (num_evals_after_init * self.env_step_per_training_step))
         self.num_training_steps_per_epoch = num_training_steps_per_epoch
         self.key = jr.PRNGKey(seed)
-        wrap_for_training = envs.training.wrap
         self.env = wrap_for_training(environment, episode_length=episode_length, action_repeat=action_repeat)
 
         self.x_dim = self.env.observation_size

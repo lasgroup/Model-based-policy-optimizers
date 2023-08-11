@@ -27,6 +27,7 @@ from jaxtyping import PyTree
 from mbpo.optimizers.policy_optimizers.sac.losses import SACLosses
 from mbpo.optimizers.policy_optimizers.sac.sac_networks import SACNetworksModel, make_inference_fn
 from mbpo.optimizers.policy_optimizers.sac.utils import gradient_update_fn, metrics_to_float
+from mbpo.optimizers.policy_optimizers.brax_utils.training import wrap as wrap_for_training
 
 Metrics = types.Metrics
 Transition = types.Transition
@@ -120,7 +121,6 @@ class SAC:
         self.grad_updates_per_step = grad_updates_per_step
 
         self.tau = tau
-        wrap_for_training = envs.training.wrap
         self.env = wrap_for_training(environment, episode_length=episode_length, action_repeat=action_repeat)
 
         self.x_dim = self.env.observation_size
