@@ -9,7 +9,6 @@ from jaxtyping import PyTree
 from mbpo.optimizers.base_optimizer import BaseOptimizer
 from mbpo.optimizers.policy_optimizers.ppo.ppo import PPO
 from mbpo.optimizers.policy_optimizers.sac.sac import SAC
-from mbpo.systems import System
 from mbpo.systems.base_systems import System, SystemParams
 from mbpo.systems.brax_wrapper import BraxWrapper
 

@@ -430,6 +430,7 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
               *args,
               **kwargs,
               ) -> BPTTTrainingOutput:
+
         train_key, key = jax.random.split(bptt_state.key, 2)
         eval_rng, train_key = jax.random.split(train_key, 2)
         eval_idx = jax.random.randint(eval_rng, (self.evaluation_samples,), minval=buffer_state.sample_position,

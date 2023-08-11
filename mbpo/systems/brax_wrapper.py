@@ -28,7 +28,7 @@ class BraxWrapper(envs.Env):
         sample: Transition
         _, sample = self.sample_buffer.sample(cur_buffer_state)
         sample = jtu.tree_map(lambda x: x[0], sample)
-        init_system_params = self.init_system_params
+        init_system_params = self.init_system_params.replace(key=keys[1])
         reward, done = sample.reward, jnp.array(0.0)
         new_state = State(pipeline_state=None,
                           obs=sample.observation,
