@@ -7,6 +7,9 @@ from brax.training.replay_buffers import UniformSamplingQueue, ReplayBufferState
 from jaxtyping import PyTree
 
 from mbpo.optimizers.base_optimizer import BaseOptimizer
+from mbpo.optimizers.policy_optimizers.ppo.ppo import PPO
+from mbpo.optimizers.policy_optimizers.sac.sac import SAC
+from mbpo.systems import System
 from mbpo.systems.base_systems import System, SystemParams
 from mbpo.systems.brax_wrapper import BraxWrapper
 
@@ -79,3 +82,23 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
         policy_params, metrics = trainer.run_training(key=new_key)
         new_opt_state = opt_state.replace(policy_params=policy_params, key=new_key)
         return BraxOutput(state=new_opt_state, summary=metrics)
+
+
+class PPOOptimizer(BraxOptimizer):
+    def __init__(self,
+                 system: System,
+                 true_buffer: UniformSamplingQueue,
+                 dummy_true_buffer_state: ReplayBufferState,
+                 **ppo_kwargs):
+        super().__init__(agent_class=PPO, system=system, true_buffer=true_buffer,
+                         dummy_true_buffer_state=dummy_true_buffer_state, **ppo_kwargs)
+
+
+class SACOptimizer(BraxOptimizer):
+    def __init__(self,
+                 system: System,
+                 true_buffer: UniformSamplingQueue,
+                 dummy_true_buffer_state: ReplayBufferState,
+                 **sac_kwargs):
+        super().__init__(agent_class=SAC, system=system, true_buffer=true_buffer,
+                         dummy_true_buffer_state=dummy_true_buffer_state, **sac_kwargs)

@@ -7,7 +7,7 @@ from brax.training.types import Transition
 from jax.lax import scan
 
 import wandb
-from mbpo.optimizers.policy_optimizers.sac_optimizer import SACOptimizer
+from mbpo.optimizers.policy_optimizers.brax_optimizers import SACOptimizer
 from mbpo.systems import PendulumSystem
 
 system = PendulumSystem()

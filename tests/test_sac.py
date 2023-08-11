@@ -5,7 +5,7 @@ from brax.training.replay_buffers import UniformSamplingQueue
 from brax.training.types import Transition
 from jax.lax import scan
 
-from mbpo.optimizers.policy_optimizers.sac_optimizer import SACOptimizer
+from mbpo.optimizers import SACOptimizer
 from mbpo.systems import PendulumSystem
 
 system = PendulumSystem()
