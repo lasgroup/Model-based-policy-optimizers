@@ -1,7 +1,7 @@
 import functools
 import math
 from copy import deepcopy
-from typing import Union, Callable, Sequence, Tuple, Any
+from typing import Union, Callable, Sequence, Tuple, Any, Generic
 
 import chex
 import distrax
@@ -170,7 +170,7 @@ class Critic(nn.Module):
         return value_1, value_2
 
 
-class BPTTOptimizer(BaseOptimizer):
+class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
 
     def __init__(self,
                  action_dim: int,
