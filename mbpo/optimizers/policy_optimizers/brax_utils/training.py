@@ -58,7 +58,7 @@ class VmapWrapper(Wrapper):
             obs=0,
             reward=0,
             done=0,
-            system_params=env.system_params_vmap_axes,
+            system_params=env.system.system_params_vmap_axes(0),
             metrics=0,
             info=0,
         )

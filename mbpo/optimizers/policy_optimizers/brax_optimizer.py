@@ -61,7 +61,6 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
             system_params: SystemParams,
             evaluate: bool = True) -> Tuple[chex.Array, BraxState]:
         policy = self.make_policy(opt_state.policy_params, evaluate)
-        # TODO: key should be passed to act?
         key, subkey = jr.split(opt_state.key)
         action = policy(obs, subkey)[0]
         return action, opt_state.replace(key=key)

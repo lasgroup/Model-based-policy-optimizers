@@ -21,7 +21,6 @@ class BraxWrapper(envs.Env):
         self.sample_buffer_state = sample_buffer_state
         self.sample_buffer = sample_buffer
         self.init_system_params = system_params
-        self.system_params_vmap_axes = self.system.system_params_vmap_axes
 
     def reset(self, rng: chex.Array) -> State:
         keys = jr.split(rng, 2)

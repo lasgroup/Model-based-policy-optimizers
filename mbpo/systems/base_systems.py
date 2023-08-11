@@ -32,7 +32,10 @@ class System(ABC, Generic[DynamicsParams, RewardParams]):
         self.x_dim = dynamics.x_dim
         self.u_dim = dynamics.u_dim
         # Here we have to set the axes of the system parameters which we want to vmap over
-        self.system_params_vmap_axes = None
+
+    @staticmethod
+    def system_params_vmap_axes(axes: int = 0):
+        return SystemParams(dynamics_params=None, reward_params=None, key=axes)
 
     def step(self,
              x: chex.Array,
