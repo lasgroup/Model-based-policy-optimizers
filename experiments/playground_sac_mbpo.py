@@ -7,7 +7,7 @@ from brax.training.types import Transition
 from jax.lax import scan
 
 import wandb
-from mbpo.optimizers.policy_optimizers.model_based_sac import ModelBasedSac
+from mbpo.optimizers.policy_optimizers.sac_optimizer import SACOptimizer
 from mbpo.systems import PendulumSystem
 
 system = PendulumSystem()
@@ -29,18 +29,18 @@ sampling_buffer_state = sampling_buffer.insert(sampling_buffer_state,
                                                jtu.tree_map(lambda x: x[None, ...], dummy_sample))
 
 # Create MBPO environment
-optimizer = ModelBasedSac(system=system,
-                          true_buffer=sampling_buffer,
-                          dummy_true_buffer_state=sampling_buffer_state,
-                          num_timesteps=20_000, num_evals=20, reward_scaling=1,
-                          episode_length=200, normalize_observations=True, action_repeat=1,
-                          discounting=0.99, lr_policy=3e-4, lr_alpha=3e-4, lr_q=3e-4, num_envs=32,
-                          batch_size=64, grad_updates_per_step=20 * 32, max_replay_size=2 ** 14, min_replay_size=2 ** 7,
-                          num_eval_envs=1,
-                          deterministic_eval=True, tau=0.005, wd_policy=0, wd_q=0, wd_alpha=0, wandb_logging=True,
-                          num_env_steps_between_updates=20, policy_hidden_layer_sizes=(128, 128, 128),
-                          critic_hidden_layer_sizes=(128, 128, 128),
-                          )
+optimizer = SACOptimizer(system=system,
+                         true_buffer=sampling_buffer,
+                         dummy_true_buffer_state=sampling_buffer_state,
+                         num_timesteps=20_000, num_evals=20, reward_scaling=1,
+                         episode_length=200, normalize_observations=True, action_repeat=1,
+                         discounting=0.99, lr_policy=3e-4, lr_alpha=3e-4, lr_q=3e-4, num_envs=32,
+                         batch_size=64, grad_updates_per_step=20 * 32, max_replay_size=2 ** 14, min_replay_size=2 ** 7,
+                         num_eval_envs=1,
+                         deterministic_eval=True, tau=0.005, wd_policy=0, wd_q=0, wd_alpha=0, wandb_logging=True,
+                         num_env_steps_between_updates=20, policy_hidden_layer_sizes=(128, 128, 128),
+                         critic_hidden_layer_sizes=(128, 128, 128),
+                         )
 
 # There is a tradeoff between num_envs, grad_updates_per_step and num_env_steps_between_updates
 # grad_updates_per_step should be roughly equal to num_envs * num_env_steps_between_updates

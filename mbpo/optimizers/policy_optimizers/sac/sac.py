@@ -24,9 +24,9 @@ from jax import jit
 from jax.lax import scan
 from jaxtyping import PyTree
 
-from mbpo.optimizers.policy_optimizers.sac_optimizer.losses import SACLosses
-from mbpo.optimizers.policy_optimizers.sac_optimizer.sac_networks import SACNetworksModel, make_inference_fn
-from mbpo.optimizers.policy_optimizers.sac_optimizer.utils import gradient_update_fn, metrics_to_float
+from mbpo.optimizers.policy_optimizers.sac.losses import SACLosses
+from mbpo.optimizers.policy_optimizers.sac.sac_networks import SACNetworksModel, make_inference_fn
+from mbpo.optimizers.policy_optimizers.sac.utils import gradient_update_fn, metrics_to_float
 
 Metrics = types.Metrics
 Transition = types.Transition
@@ -48,6 +48,9 @@ class TrainingState:
     alpha_optimizer_state: optax.OptState
     alpha_params: Params
     normalizer_params: running_statistics.RunningStatisticsState
+
+    def get_policy_params(self):
+        return self.normalizer_params, self.policy_params
 
 
 class SAC:

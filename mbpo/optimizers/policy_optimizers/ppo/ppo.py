@@ -20,9 +20,9 @@ from brax.training.types import Params
 from jax.lax import scan
 from jaxtyping import PyTree
 
-from mbpo.optimizers.policy_optimizers.ppo_optimizer.losses import PPOLoss, PPONetworkParams
-from mbpo.optimizers.policy_optimizers.ppo_optimizer.ppo_network import PPONetworksModel, make_inference_fn
-from mbpo.optimizers.policy_optimizers.sac_optimizer.utils import gradient_update_fn, metrics_to_float
+from mbpo.optimizers.policy_optimizers.ppo.losses import PPOLoss, PPONetworkParams
+from mbpo.optimizers.policy_optimizers.ppo.ppo_network import PPONetworksModel, make_inference_fn
+from mbpo.optimizers.policy_optimizers.sac.utils import gradient_update_fn, metrics_to_float
 
 Metrics = types.Metrics
 Transition = types.Transition
@@ -38,6 +38,9 @@ class TrainingState:
     params: PPONetworkParams
     normalizer_params: running_statistics.RunningStatisticsState
     env_steps: jnp.ndarray
+
+    def get_policy_params(self):
+        return self.normalizer_params, self.params.policy
 
 
 class PPO:

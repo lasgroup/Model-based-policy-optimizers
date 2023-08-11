@@ -1,7 +1,7 @@
 import functools
 import math
 from copy import deepcopy
-from typing import Union, Callable, Sequence, Tuple, Any, Generic
+from typing import Union, Callable, Sequence, Tuple, Any
 
 import chex
 import distrax

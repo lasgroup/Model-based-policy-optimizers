@@ -7,7 +7,7 @@ from brax.training.types import Transition
 from jax.lax import scan
 
 import wandb
-from mbpo.optimizers.policy_optimizers.model_based_ppo import ModelBasedPPO
+from mbpo.optimizers.policy_optimizers.ppo_optimizer import PPOOptimizer
 from mbpo.systems import PendulumSystem
 
 system = PendulumSystem()
@@ -29,34 +29,34 @@ sampling_buffer_state = sampling_buffer.insert(sampling_buffer_state,
                                                jtu.tree_map(lambda x: x[None, ...], dummy_sample))
 
 # Create MBPO environment
-optimizer = ModelBasedPPO(system=system,
-                          true_buffer=sampling_buffer,
-                          dummy_true_buffer_state=sampling_buffer_state,
-                          num_timesteps=1_000_000,
-                          episode_length=200,
-                          action_repeat=1,
-                          num_envs=16,
-                          num_eval_envs=1,
-                          lr=3e-3,
-                          wd=0,
-                          entropy_cost=1e-1,
-                          discounting=0.99,
-                          seed=0,
-                          unroll_length=40,
-                          batch_size=32,
-                          num_minibatches=32,
-                          num_updates_per_batch=4,
-                          num_evals=20,
-                          normalize_observations=True,
-                          reward_scaling=1,
-                          clipping_epsilon=0.3,
-                          gae_lambda=0.95,
-                          deterministic_eval=True,
-                          normalize_advantage=True,
-                          policy_hidden_layer_sizes=(128, 128, 128),
-                          critic_hidden_layer_sizes=(128, 128, 128),
-                          wandb_logging=True,
-                          )
+optimizer = PPOOptimizer(system=system,
+                         true_buffer=sampling_buffer,
+                         dummy_true_buffer_state=sampling_buffer_state,
+                         num_timesteps=1_000_000,
+                         episode_length=200,
+                         action_repeat=1,
+                         num_envs=16,
+                         num_eval_envs=1,
+                         lr=3e-3,
+                         wd=0,
+                         entropy_cost=1e-1,
+                         discounting=0.99,
+                         seed=0,
+                         unroll_length=40,
+                         batch_size=32,
+                         num_minibatches=32,
+                         num_updates_per_batch=4,
+                         num_evals=20,
+                         normalize_observations=True,
+                         reward_scaling=1,
+                         clipping_epsilon=0.3,
+                         gae_lambda=0.95,
+                         deterministic_eval=True,
+                         normalize_advantage=True,
+                         policy_hidden_layer_sizes=(128, 128, 128),
+                         critic_hidden_layer_sizes=(128, 128, 128),
+                         wandb_logging=True,
+                         )
 
 # There is a tradeoff between num_envs, grad_updates_per_step and num_env_steps_between_updates
 # grad_updates_per_step should be roughly equal to num_envs * num_env_steps_between_updates
