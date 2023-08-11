@@ -1,9 +1,11 @@
+from functools import partial
 from typing import Tuple, List
 
 import chex
 import jax.random as jr
 from brax.training import types
 from brax.training.replay_buffers import UniformSamplingQueue, ReplayBufferState
+from jax import jit
 from jaxtyping import PyTree
 
 from mbpo.optimizers.base_optimizer import BaseOptimizer
@@ -57,6 +59,7 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
                          policy_params=training_state.get_policy_params(),
                          key=keys[2])
 
+    @partial(jit, static_argnums=(0,))
     def act(self,
             obs: chex.Array,
             opt_state: BraxState,
@@ -67,6 +70,7 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
         action = policy(obs, subkey)[0]
         return action, opt_state.replace(key=key)
 
+    @partial(jit, static_argnums=(0,))
     def train(self,
               opt_state: BraxState,
               *args,
