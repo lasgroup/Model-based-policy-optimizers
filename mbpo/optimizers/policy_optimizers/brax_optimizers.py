@@ -70,7 +70,7 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
         action = policy(obs, subkey)[0]
         return action, opt_state.replace(key=key)
 
-    @partial(jit, static_argnums=(0,))
+    # @partial(jit, static_argnums=(0,))
     def train(self,
               opt_state: BraxState,
               *args,
