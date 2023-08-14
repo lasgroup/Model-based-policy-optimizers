@@ -59,7 +59,7 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
                          policy_params=training_state.get_policy_params(),
                          key=keys[2])
 
-    @partial(jit, static_argnums=(0,))
+    @partial(jit, static_argnums=(0, 4))
     def act(self,
             obs: chex.Array,
             opt_state: BraxState,

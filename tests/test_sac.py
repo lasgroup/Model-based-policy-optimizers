@@ -60,14 +60,13 @@ optimizer = SACOptimizer(system=system,
 # There is a tradeoff between num_envs, grad_updates_per_step and num_env_steps_between_updates
 # grad_updates_per_step should be roughly equal to num_envs * num_env_steps_between_updates
 
-init_optimizer_state = optimizer.init(key=jr.PRNGKey(0),
-                                      true_buffer_state=sampling_buffer_state)
+init_optimizer_state = optimizer.init(key=jr.PRNGKey(0), true_buffer_state=sampling_buffer_state)
 
 sac_output = optimizer.train(opt_state=init_optimizer_state)
 
 
 def policy(x):
-    return optimizer.act(x, sac_output.state, sac_output.state.system_params, evaluate=False)
+    return optimizer.act(x, sac_output.state, sac_output.state.system_params, evaluate=True)
 
 
 def step(x, _):

@@ -10,7 +10,7 @@ from mbpo.systems import PendulumSystem
 
 system = PendulumSystem()
 # Create replay buffer
-init_sys_state = system.reset(rng=0)
+init_sys_state = system.reset(rng=jr.PRNGKey(0))
 
 dummy_sample = Transition(observation=init_sys_state.x_next,
                           action=jnp.zeros(shape=(system.u_dim,)),
@@ -66,7 +66,7 @@ ppo_output = optimizer.train(opt_state=init_optimizer_state)
 
 
 def policy(x):
-    return optimizer.act(x, ppo_output.state, ppo_output.state.system_params, evaluate=False)
+    return optimizer.act(x, ppo_output.state, ppo_output.state.system_params, evaluate=True)
 
 
 def step(x, _):

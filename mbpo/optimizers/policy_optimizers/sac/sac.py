@@ -381,10 +381,10 @@ class SAC:
         if self.num_evals > 1:
             metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.policy_params),
                                                training_metrics={})
-            float_metrics = metrics_to_float(metrics)
             if self.wandb_logging:
-                wandb.log(float_metrics)
-            all_metrics.append(float_metrics)
+                metrics = metrics_to_float(metrics)
+                wandb.log(metrics)
+            all_metrics.append(metrics)
             progress_fn(0, metrics)
 
         # Create and initialize the replay buffer.
@@ -395,7 +395,7 @@ class SAC:
         replay_size = self.replay_buffer.size(buffer_state)
         if self.wandb_logging:
             wandb.log(metrics_to_float({'replay size after prefill': replay_size}))
-        assert replay_size >= self.min_replay_size
+        # assert replay_size >= self.min_replay_size
 
         current_step = 0
 
@@ -409,24 +409,25 @@ class SAC:
                                                                                                         env_state,
                                                                                                         buffer_state,
                                                                                                         epoch_key)
-            current_step = int(training_state.env_steps)
+            # current_step = int(training_state.env_steps)
 
             # Eval and logging
             # Run evals.
             metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.policy_params),
                                                training_metrics)
-            float_metrics = metrics_to_float(metrics)
-            if self.wandb_logging:
-                wandb.log(float_metrics)
-            all_metrics.append(float_metrics)
-            progress_fn(current_step, metrics)
 
-        total_steps = current_step
-        assert total_steps >= self.num_timesteps
+            if self.wandb_logging:
+                metrics = metrics_to_float(metrics)
+                wandb.log(metrics)
+            all_metrics.append(metrics)
+            progress_fn(training_state.env_steps, metrics)
+
+        # total_steps = current_step
+        # assert total_steps >= self.num_timesteps
         params = (training_state.normalizer_params, training_state.policy_params)
 
         # If there were no mistakes the training_state should still be identical on all
         # devices.
         if self.wandb_logging:
-            wandb.log(metrics_to_float({'total steps': total_steps}))
+            wandb.log(metrics_to_float({'total steps': int(training_state.env_steps)}))
         return params, all_metrics

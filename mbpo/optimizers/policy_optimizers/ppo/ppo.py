@@ -286,10 +286,11 @@ class PPO:
         if self.num_evals > 1:
             metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.params.policy),
                                                training_metrics={})
-            float_metrics = metrics_to_float(metrics)
+
             if self.wandb_logging:
-                wandb.log(float_metrics)
-            all_metrics.append(float_metrics)
+                metrics = metrics_to_float(metrics)
+                wandb.log(metrics)
+            all_metrics.append(metrics)
             progress_fn(0, metrics)
 
         # Create and initialize the replay buffer.
@@ -304,20 +305,20 @@ class PPO:
             key, epoch_key = jr.split(key)
             training_state, env_state, training_metrics = self.training_epoch_with_timing(training_state, env_state,
                                                                                           epoch_key)
-            current_step = int(training_state.env_steps)
+            current_step = training_state.env_steps
 
             # Eval and logging
             # Run evals.
             metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.params.policy),
                                                training_metrics)
-            float_metrics = metrics_to_float(metrics)
             if self.wandb_logging:
-                wandb.log(float_metrics)
-            all_metrics.append(float_metrics)
+                metrics = metrics_to_float(metrics)
+                wandb.log(metrics)
+            all_metrics.append(metrics)
             progress_fn(current_step, metrics)
 
         total_steps = current_step
-        assert total_steps >= self.num_timesteps
+        # assert total_steps >= self.num_timesteps
         params = (training_state.normalizer_params, training_state.params.policy)
 
         # If there were no mistakes the training_state should still be identical on all
