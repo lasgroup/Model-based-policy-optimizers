@@ -23,7 +23,7 @@ class PendulumDynamics(Dynamics[PendulumDynamicsParams]):
     def __init__(self):
         super().__init__(x_dim=3, u_dim=1)
 
-    def init_params(self, key: chex.PRNGKey) -> PendulumDynamicsParams:
+    def init_params(self, key: chex.PRNGKey, kwargs: dict=None) -> PendulumDynamicsParams:
         return PendulumDynamicsParams()
 
     def next_state(self,

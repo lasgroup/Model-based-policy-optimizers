@@ -140,8 +140,10 @@ class PPO:
                                              has_aux=True)
 
     def minibatch_step(self,
-                       carry, data: types.Transition,
+                       carry,
+                       data: types.Transition,
                        normalizer_params: running_statistics.RunningStatisticsState):
+        # Performs one ppo update
         optimizer_state, params, key = carry
         key, key_loss = jr.split(key)
         (_, metrics), params, optimizer_state = self.ppo_update(
@@ -178,11 +180,16 @@ class PPO:
             self,
             carry: Tuple[TrainingState, envs.State, chex.PRNGKey],
             unused_t) -> Tuple[Tuple[TrainingState, envs.State, chex.PRNGKey], Metrics]:
+        """
+        1.  Performs a rollout of length `self.unroll_length` using the current policy.
+            Since there is self.num_envs environments, this will result in a self.num_envs * self.unroll_length
+            collected transitions.
+        """
         training_state, state, key = carry
         key_sgd, key_generate_unroll, new_key = jr.split(key, 3)
 
-        policy = self.make_policy(
-            (training_state.normalizer_params, training_state.params.policy))
+        # Deterministic is set by default to False
+        policy = self.make_policy((training_state.normalizer_params, training_state.params.policy))
 
         def f(carry, unused_t):
             current_state, current_key = carry
@@ -211,6 +218,7 @@ class PPO:
             data.observation,
             pmap_axis_name=self._PMAP_AXIS_NAME)
 
+        # Perform self.num_updates_per_batch calls of self.sgd_step
         (optimizer_state, params, _), metrics = scan(
             partial(
                 self.sgd_step, data=data, normalizer_params=normalizer_params),
@@ -229,6 +237,9 @@ class PPO:
             training_state: TrainingState,
             state: envs.State,
             key: chex.PRNGKey) -> Tuple[TrainingState, envs.State, Metrics]:
+        """
+        Performs self.num_training_steps_per_epoch calls of self.training_step functions.
+        """
         (training_state, state, _), loss_metrics = scan(
             self.training_step, (training_state, state, key), (),
             length=self.num_training_steps_per_epoch)

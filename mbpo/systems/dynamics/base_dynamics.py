@@ -20,5 +20,5 @@ class Dynamics(ABC, Generic[DynamicsParams]):
         pass
 
     @abstractmethod
-    def init_params(self, key: chex.PRNGKey) -> DynamicsParams:
+    def init_params(self, key: chex.PRNGKey, kwargs: dict = None) -> DynamicsParams:
         pass

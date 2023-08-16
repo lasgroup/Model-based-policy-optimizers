@@ -51,10 +51,15 @@ class System(ABC, Generic[DynamicsParams, RewardParams]):
         """
         pass
 
-    def init_params(self, key: chex.PRNGKey) -> SystemParams[DynamicsParams, RewardParams]:
+    def init_params(self,
+                    key: chex.PRNGKey,
+                    dynamics_kwargs: dict = None,
+                    reward_kwargs: dict = None,) -> SystemParams[DynamicsParams, RewardParams]:
         keys = jr.split(key, 3)
         return SystemParams(
-            dynamics_params=self.dynamics.init_params(keys[0]),
-            reward_params=self.reward.init_params(keys[1]),
+            dynamics_params=self.dynamics.init_params(key=keys[0],
+                                                      kwargs=dynamics_kwargs),
+            reward_params=self.reward.init_params(key=keys[1],
+                                                  kwargs=reward_kwargs),
             key=keys[2],
         )

@@ -21,5 +21,5 @@ class Reward(ABC, Generic[RewardParams]):
         pass
 
     @abstractmethod
-    def init_params(self, key: chex.PRNGKey) -> RewardParams:
+    def init_params(self, key: chex.PRNGKey, kwargs: dict = None) -> RewardParams:
         pass

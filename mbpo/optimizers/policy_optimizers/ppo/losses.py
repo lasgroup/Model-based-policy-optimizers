@@ -110,7 +110,8 @@ class PPOLoss:
 
         # Value function loss
         v_error = vs - baseline
-        v_loss = jnp.mean(v_error * v_error) * 0.5 * 0.5
+        # Why is here double times 0.5 factor?
+        v_loss = jnp.mean(v_error * v_error) * 0.5
 
         # Entropy reward
         entropy = jnp.mean(parametric_action_distribution.entropy(policy_logits, rng))
