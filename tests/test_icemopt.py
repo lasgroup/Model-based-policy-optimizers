@@ -18,13 +18,13 @@ horizon = 200
 
 def rollout_cem(carry, ins):
     system_state, cem_optimizer_state = carry[0], carry[1]
-    action, new_cem_optimizer_state = cem_optimizer.act(obs=system_state.x_next, opt_state=cem_optimizer_state,
+    action, new_cem_optimizer_state = cem_optimizer.act(obs=system_state.x_obs, opt_state=cem_optimizer_state,
                                                         system_params=system_state.system_params)
-    new_system_state = system.step(x=system_state.x_next, u=action,
+    new_system_state = system.step(x=system_state.x_obs, u=action,
                                    system_params=system_state.system_params)
 
     carry = [new_system_state, new_cem_optimizer_state]
-    outs = [new_system_state.x_next, new_system_state.reward]
+    outs = [new_system_state.x_obs, new_system_state.reward]
     return carry, outs
 
 

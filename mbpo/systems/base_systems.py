@@ -14,12 +14,13 @@ from mbpo.systems.rewards.base_rewards import Reward, RewardParams
 class SystemParams(Generic[DynamicsParams, RewardParams]):
     dynamics_params: DynamicsParams
     reward_params: RewardParams
+    x_true: chex.Array
     key: chex.PRNGKey = struct.field(default_factory=lambda: jr.PRNGKey(0))
 
 
 @chex.dataclass
 class SystemState(Generic[DynamicsParams, RewardParams]):
-    x_next: chex.Array
+    x_obs: chex.Array
     reward: chex.Array
     system_params: SystemParams[DynamicsParams, RewardParams]
     done: chex.Array = struct.field(default_factory=lambda: jnp.array(0.0))
@@ -51,15 +52,10 @@ class System(ABC, Generic[DynamicsParams, RewardParams]):
         """
         pass
 
-    def init_params(self,
-                    key: chex.PRNGKey,
-                    dynamics_kwargs: dict = None,
-                    reward_kwargs: dict = None,) -> SystemParams[DynamicsParams, RewardParams]:
+    def init_params(self,key: chex.PRNGKey,) -> SystemParams[DynamicsParams, RewardParams]:
         keys = jr.split(key, 3)
         return SystemParams(
-            dynamics_params=self.dynamics.init_params(key=keys[0],
-                                                      kwargs=dynamics_kwargs),
-            reward_params=self.reward.init_params(key=keys[1],
-                                                  kwargs=reward_kwargs),
+            dynamics_params=self.dynamics.init_params(key=keys[0]),
+            reward_params=self.reward.init_params(key=keys[1]),
             key=keys[2],
         )

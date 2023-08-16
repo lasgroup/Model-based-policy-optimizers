@@ -21,7 +21,7 @@ class PendulumReward(Reward[PendulumRewardParams]):
     def __init__(self):
         super().__init__(x_dim=3, u_dim=1)
 
-    def init_params(self, key: chex.PRNGKey, kwargs: dict = None) -> PendulumRewardParams:
+    def init_params(self, key: chex.PRNGKey) -> PendulumRewardParams:
         return PendulumRewardParams()
 
     def __call__(self,

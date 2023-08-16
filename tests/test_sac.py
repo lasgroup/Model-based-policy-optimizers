@@ -12,11 +12,11 @@ system = PendulumSystem()
 # Create replay buffer
 init_sys_state = system.reset(rng=0)
 
-dummy_sample = Transition(observation=init_sys_state.x_next,
+dummy_sample = Transition(observation=init_sys_state.x_obs,
                           action=jnp.zeros(shape=(system.u_dim,)),
                           reward=init_sys_state.reward,
                           discount=jnp.array(0.99),
-                          next_observation=init_sys_state.x_next)
+                          next_observation=init_sys_state.x_obs)
 
 sampling_buffer = UniformSamplingQueue(max_replay_size=10,
                                        dummy_data_sample=dummy_sample,
@@ -72,11 +72,11 @@ def policy(x):
 def step(x, _):
     u = policy(x)[0]
     next_sys_state = system.step(x, u, sac_output.state.system_params)
-    return next_sys_state.x_next, (x, u, next_sys_state.reward)
+    return next_sys_state.x_obs, (x, u, next_sys_state.reward)
 
 
 system_state_init = system.reset(rng=jr.PRNGKey(0))
-x_init = system_state_init.x_next
+x_init = system_state_init.x_obs
 
 horizon = 200
 x_last, trajectory = scan(step, x_init, None, length=horizon)

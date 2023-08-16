@@ -29,11 +29,11 @@ def sample_obs(key):
 sample_key = jax.random.split(sample_key, num_samples)
 obs = jax.vmap(sample_obs)(sample_key)
 
-dummy_sample = Transition(observation=init_sys_state.x_next,
+dummy_sample = Transition(observation=init_sys_state.x_obs,
                           action=jnp.zeros(shape=(system.u_dim,)),
                           reward=init_sys_state.reward,
                           discount=jnp.array(0.99),
-                          next_observation=init_sys_state.x_next)
+                          next_observation=init_sys_state.x_obs)
 
 sampling_buffer = UniformSamplingQueue(max_replay_size=10000,
                                        dummy_data_sample=dummy_sample,
@@ -71,12 +71,12 @@ bptt_state = output.bptt_state
 
 def rollout_bptt(carry, ins):
     system_state, bptt_state = carry[0], carry[1]
-    action, new_bptt_optimizer_state = optimizer.act(obs=system_state.x_next, opt_state=bptt_state)
-    new_system_state = system.step(x=system_state.x_next, u=action,
+    action, new_bptt_optimizer_state = optimizer.act(obs=system_state.x_obs, opt_state=bptt_state)
+    new_system_state = system.step(x=system_state.x_obs, u=action,
                                    system_params=system_state.system_params)
 
     carry = [new_system_state, new_bptt_optimizer_state]
-    outs = [new_system_state.x_next, new_system_state.reward]
+    outs = [new_system_state.x_obs, new_system_state.reward]
     return carry, outs
 
 
