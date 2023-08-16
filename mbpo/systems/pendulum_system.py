@@ -39,7 +39,6 @@ class PendulumSystem(System[PendulumDynamicsParams, PendulumRewardParams]):
         )
 
     def reset(self, rng: jnp.ndarray) -> SystemState:
-        x_init = jnp.array([-1.0, 0.0, 0.0])
         return SystemState(
             x_next=jnp.array([-1.0, 0.0, 0.0]),
             reward=jnp.array([0.0]).squeeze(),
@@ -59,6 +58,6 @@ if __name__ == '__main__':
     system_state = jax.vmap(system.reset)(reset_keys)
     action_key, key = random.split(key, 2)
     actions = random.uniform(key=action_key, shape=(num_envs, 1))
-    next_system_state = jax.vmap(system.step)(system_state.x_obs, actions, system_state.system_params)
+    next_system_state = jax.vmap(system.step)(system_state.x_next, actions, system_state.system_params)
     chex.assert_shape(next_system_state.reward, (num_envs,))
-    chex.assert_shape(next_system_state.x_obs, (num_envs, 3))
+    chex.assert_shape(next_system_state.x_next, (num_envs, 3))

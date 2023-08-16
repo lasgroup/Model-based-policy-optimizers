@@ -12,9 +12,9 @@ system = PendulumSystem()
 system_state = jax.vmap(system.reset)(reset_keys)
 action_key, key = random.split(key, 2)
 actions = random.uniform(key=action_key, shape=(num_envs, 1))
-next_system_state = jax.vmap(system.step)(system_state.x_obs, actions, system_state.system_params)
+next_system_state = jax.vmap(system.step)(system_state.x_next, actions, system_state.system_params)
 
 
 def test_prediction_dimension():
-    assert next_system_state.x_obs.shape == (num_envs, 3)
+    assert next_system_state.x_next.shape == (num_envs, 3)
     assert next_system_state.reward.shape == (num_envs,)

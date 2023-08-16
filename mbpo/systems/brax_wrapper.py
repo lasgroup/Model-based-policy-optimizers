@@ -29,7 +29,6 @@ class BraxWrapper(envs.Env):
         _, sample = self.sample_buffer.sample(cur_buffer_state)
         sample = jtu.tree_map(lambda x: x[0], sample)
         init_system_params = self.init_system_params.replace(key=keys[1])
-        system_params = init_system_params.replace(dynamics_params=init_system_params.dynamics_params.replace(x),)
         reward, done = sample.reward, jnp.array(0.0)
         new_state = State(pipeline_state=None,
                           obs=sample.observation,
@@ -40,7 +39,7 @@ class BraxWrapper(envs.Env):
 
     def step(self, state: State, action: chex.Array) -> State:
         next_sys_state = self.system.step(state.obs, action, state.system_params)
-        next_obs = next_sys_state.x_obs
+        next_obs = next_sys_state.x_next
         next_reward = next_sys_state.reward
         next_done = next_sys_state.done
         next_sys_params = next_sys_state.system_params

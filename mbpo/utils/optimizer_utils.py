@@ -34,7 +34,7 @@ def rollout_actions(
             u=acs,
             system_params=sys_params,
         )
-        next_obs = system_output.x_obs
+        next_obs = system_output.x_next
         reward = system_output.reward
         next_sys_params = system_output.system_params
         carry = [next_obs, next_sys_params]
@@ -91,7 +91,7 @@ def rollout_policy(
             u=acs,
             system_params=sys_params,
         )
-        next_obs = system_output.x_obs
+        next_obs = system_output.x_next
         reward = system_output.reward
         next_sys_params = system_output.system_params
         carry = [next_obs, next_sys_params, new_policy_state]
