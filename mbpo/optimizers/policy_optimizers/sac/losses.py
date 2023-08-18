@@ -31,13 +31,14 @@ Transition = types.Transition
 
 class SACLosses:
     def __init__(self, sac_network: SACNetworks, reward_scaling: float,
-                 discounting: float, u_dim: int):
+                 discounting: float, u_dim: int, target_entropy: float | None = None):
         self.sac_network = sac_network
         self.reward_scaling = reward_scaling
         self.discounting = discounting
         self.u_dim = u_dim
-
-        self.target_entropy = -0.5 * self.u_dim
+        if target_entropy is None:
+            target_entropy = -0.5 * self.u_dim
+        self.target_entropy = target_entropy
         self.policy_network = self.sac_network.policy_network
         self.q_network = self.sac_network.q_network
         self.parametric_action_distribution = self.sac_network.parametric_action_distribution
