@@ -79,6 +79,8 @@ class SAC:
                  max_replay_size: Optional[int] = None,
                  grad_updates_per_step: int = 1,
                  deterministic_eval: bool = True,
+                 init_log_alpha: float = 0.,
+                 target_entropy: float | None = None,
                  policy_hidden_layer_sizes: Sequence[int] = (64, 64, 64),
                  policy_activation: networks.ActivationFn = nn.swish,
                  critic_hidden_layer_sizes: Sequence[int] = (64, 64, 64),
@@ -89,6 +91,8 @@ class SAC:
             raise ValueError(
                 'No training will happen because min_replay_size >= num_timesteps')
 
+        self.target_entropy = target_entropy
+        self.init_log_alpha = init_log_alpha
         self.wandb_logging = wandb_logging
         self.min_replay_size = min_replay_size
         self.num_timesteps = num_timesteps
@@ -168,7 +172,7 @@ class SAC:
 
         # Setup optimization
         self.losses = SACLosses(sac_network=self.sac_networks_model.get_sac_networks(), reward_scaling=reward_scaling,
-                                discounting=discounting, u_dim=self.u_dim)
+                                discounting=discounting, u_dim=self.u_dim, target_entropy=self.target_entropy)
 
         self.alpha_update = gradient_update_fn(
             self.losses.alpha_loss, self.alpha_optimizer, pmap_axis_name=self._PMAP_AXIS_NAME)
@@ -332,7 +336,7 @@ class SAC:
     def init_training_state(self, key: chex.PRNGKey) -> TrainingState:
         """Inits the training state and replicates it over devices."""
         key_policy, key_q = jr.split(key)
-        log_alpha = jnp.asarray(0., dtype=jnp.float32)
+        log_alpha = jnp.asarray(self.init_log_alpha, dtype=jnp.float32)
         alpha_optimizer_state = self.alpha_optimizer.init(log_alpha)
 
         policy_params = self.sac_networks_model.get_policy_network().init(key_policy)
