@@ -24,10 +24,10 @@ from jax import jit
 from jax.lax import scan
 from jaxtyping import PyTree
 
+from mbpo.optimizers.policy_optimizers.brax_utils.training import wrap as wrap_for_training
 from mbpo.optimizers.policy_optimizers.sac.losses import SACLosses
 from mbpo.optimizers.policy_optimizers.sac.sac_networks import SACNetworksModel, make_inference_fn
 from mbpo.optimizers.policy_optimizers.sac.utils import gradient_update_fn, metrics_to_float
-from mbpo.optimizers.policy_optimizers.brax_utils.training import wrap as wrap_for_training
 
 Metrics = types.Metrics
 Transition = types.Transition
@@ -86,11 +86,15 @@ class SAC:
                  critic_hidden_layer_sizes: Sequence[int] = (64, 64, 64),
                  critic_activation: networks.ActivationFn = nn.swish,
                  wandb_logging: bool = False,
+                 return_best_model: bool = False,
+                 eval_environment: envs.Env | None = None,
+                 episode_length_eval: int | None = None,
                  ):
         if min_replay_size >= num_timesteps:
             raise ValueError(
                 'No training will happen because min_replay_size >= num_timesteps')
 
+        self.return_best_model = return_best_model
         self.target_entropy = target_entropy
         self.init_log_alpha = init_log_alpha
         self.wandb_logging = wandb_logging
@@ -125,7 +129,20 @@ class SAC:
         self.grad_updates_per_step = grad_updates_per_step
 
         self.tau = tau
-        self.env = wrap_for_training(environment, episode_length=episode_length, action_repeat=action_repeat)
+        self.env = wrap_for_training(environment,
+                                     episode_length=episode_length,
+                                     action_repeat=action_repeat)
+
+        # Prepare env for evaluation
+        if episode_length_eval is None:
+            episode_length_eval = episode_length
+
+        self.episode_length_eval = episode_length_eval
+        if eval_environment is None:
+            eval_environment = environment
+        self.eval_env = wrap_for_training(eval_environment,
+                                          episode_length=episode_length_eval,
+                                          action_repeat=action_repeat)
 
         self.x_dim = self.env.observation_size
         self.u_dim = self.env.action_size
@@ -252,9 +269,6 @@ class SAC:
 
         transitions = jtu.tree_map(jnp.concatenate, transitions)
 
-        # env_state, transitions = acting.actor_step(
-        #     self.env, env_state, policy, key, extra_fields=('truncation',))
-
         normalizer_params = running_statistics.update(
             normalizer_params,
             transitions.observation,
@@ -375,16 +389,21 @@ class SAC:
         buffer_state = self.replay_buffer.init(rb_key)
 
         evaluator = acting.Evaluator(
-            self.env, functools.partial(self.make_policy, deterministic=self.deterministic_eval),
-            num_eval_envs=self.num_eval_envs, episode_length=self.episode_length, action_repeat=self.action_repeat,
+            self.eval_env, functools.partial(self.make_policy, deterministic=self.deterministic_eval),
+            num_eval_envs=self.num_eval_envs, episode_length=self.episode_length_eval, action_repeat=self.action_repeat,
             key=eval_key)
 
         # Run initial eval
         all_metrics = []
         metrics = {}
+        highest_eval_episode_reward = jnp.array(-jnp.inf)
+        best_params = (training_state.normalizer_params, training_state.policy_params)
         if self.num_evals > 1:
             metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.policy_params),
                                                training_metrics={})
+            if metrics['eval/episode_reward'] > highest_eval_episode_reward:
+                highest_eval_episode_reward = metrics['eval/episode_reward']
+                best_params = (training_state.normalizer_params, training_state.policy_params)
             if self.wandb_logging:
                 metrics = metrics_to_float(metrics)
                 wandb.log(metrics)
@@ -420,6 +439,10 @@ class SAC:
             metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.policy_params),
                                                training_metrics)
 
+            if metrics['eval/episode_reward'] > highest_eval_episode_reward:
+                highest_eval_episode_reward = metrics['eval/episode_reward']
+                best_params = (training_state.normalizer_params, training_state.policy_params)
+
             if self.wandb_logging:
                 metrics = metrics_to_float(metrics)
                 wandb.log(metrics)
@@ -428,10 +451,8 @@ class SAC:
 
         # total_steps = current_step
         # assert total_steps >= self.num_timesteps
-        params = (training_state.normalizer_params, training_state.policy_params)
-
         # If there were no mistakes the training_state should still be identical on all
         # devices.
         if self.wandb_logging:
             wandb.log(metrics_to_float({'total steps': int(training_state.env_steps)}))
-        return params, all_metrics
+        return best_params, all_metrics
