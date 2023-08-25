@@ -12,7 +12,6 @@ import jax.tree_util as jtu
 import optax
 import wandb
 from brax import envs
-from brax.training import acting
 from brax.training import networks
 from brax.training import replay_buffers
 from brax.training import types
@@ -25,6 +24,7 @@ from jax.lax import scan
 from jaxtyping import PyTree
 
 from mbpo.optimizers.policy_optimizers.brax_utils.training import wrap as wrap_for_training
+from mbpo.optimizers.policy_optimizers.sac import acting
 from mbpo.optimizers.policy_optimizers.sac.losses import SACLosses
 from mbpo.optimizers.policy_optimizers.sac.sac_networks import SACNetworksModel, make_inference_fn
 from mbpo.optimizers.policy_optimizers.sac.utils import gradient_update_fn, metrics_to_float
@@ -89,11 +89,13 @@ class SAC:
                  return_best_model: bool = False,
                  eval_environment: envs.Env | None = None,
                  episode_length_eval: int | None = None,
+                 eval_key_fixed: bool = False,
                  ):
         if min_replay_size >= num_timesteps:
             raise ValueError(
                 'No training will happen because min_replay_size >= num_timesteps')
 
+        self.eval_key_fixed = eval_key_fixed
         self.return_best_model = return_best_model
         self.target_entropy = target_entropy
         self.init_log_alpha = init_log_alpha
@@ -422,6 +424,9 @@ class SAC:
 
         current_step = 0
 
+        if self.eval_key_fixed:
+            key, eval_key = jr.split(key)
+
         for _ in range(self.num_evals_after_init):
             if self.wandb_logging:
                 wandb.log(metrics_to_float({'step': current_step}))
@@ -436,8 +441,10 @@ class SAC:
 
             # Eval and logging
             # Run evals.
+            if not self.eval_key_fixed:
+                key, eval_key = jr.split(key)
             metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.policy_params),
-                                               training_metrics)
+                                               training_metrics, unroll_key=eval_key)
 
             if metrics['eval/episode_reward'] > highest_eval_episode_reward:
                 highest_eval_episode_reward = metrics['eval/episode_reward']
