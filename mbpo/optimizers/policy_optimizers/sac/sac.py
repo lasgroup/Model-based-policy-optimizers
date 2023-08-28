@@ -458,8 +458,13 @@ class SAC:
 
         # total_steps = current_step
         # assert total_steps >= self.num_timesteps
-        # If there were no mistakes the training_state should still be identical on all
-        # devices.
+        last_params = (training_state.normalizer_params, training_state.policy_params)
+
+        if self.return_best_model:
+            params_to_return = best_params
+        else:
+            params_to_return = last_params
+
         if self.wandb_logging:
             wandb.log(metrics_to_float({'total steps': int(training_state.env_steps)}))
-        return best_params, all_metrics
+        return params_to_return, all_metrics
