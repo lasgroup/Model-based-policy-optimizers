@@ -173,7 +173,7 @@ class iCemOptimizerState:
         return self.best_sequence[0]
 
 
-class iCemTO(BaseOptimizer):
+class iCemTO(BaseOptimizer[iCemOptimizerState, iCemOptimizerState]):
     def __init__(self,
                  horizon: int,
                  action_dim: int,
