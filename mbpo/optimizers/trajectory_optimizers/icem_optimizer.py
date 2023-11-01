@@ -6,10 +6,13 @@ from jax.numpy.fft import irfft, rfftfreq
 import jax
 import jax.numpy as jnp
 from functools import partial
-from typing import NamedTuple
+from typing import NamedTuple, Generic
 from mbpo.utils.optimizer_utils import rollout_actions
 from mbpo.systems.base_systems import SystemParams
 from mbpo.optimizers.base_optimizer import BaseOptimizer
+from mbpo.utils.type_aliases import OptimizerState, OptimizerTrainingOutPut
+from mbpo.systems.rewards.base_rewards import RewardParams
+from mbpo.systems.dynamics.base_dynamics import DynamicsParams
 
 
 @partial(jax.jit, static_argnums=(0, 1, 3))
@@ -163,7 +166,7 @@ class iCemParams(NamedTuple):
 
 
 @chex.dataclass
-class iCemOptimizerState:
+class iCemOptimizerState(OptimizerState, Generic[DynamicsParams, RewardParams]):
     best_sequence: chex.Array
     best_reward: chex.Array
     key: jax.random.PRNGKey
@@ -173,7 +176,7 @@ class iCemOptimizerState:
         return self.best_sequence[0]
 
 
-class iCemTO(BaseOptimizer[iCemOptimizerState, iCemOptimizerState]):
+class iCemTO(BaseOptimizer, Generic[DynamicsParams, RewardParams]):
     def __init__(self,
                  horizon: int,
                  action_dim: int,
@@ -185,14 +188,17 @@ class iCemTO(BaseOptimizer[iCemOptimizerState, iCemOptimizerState]):
         self.horizon = horizon
         self.opt_params = opt_params
         self.key = key
-        self.opt_dim = (horizon,) + (action_dim, )
+        self.opt_dim = (horizon,) + (action_dim,)
 
-    def initialize_optimizer(self):
-        init_key, key = jax.random.split(self.key, 2)
+    def init(self, key: chex.Array):
+        assert self.system is not None, "iCem optimizer requires system to be defined."
+        init_key, key = jax.random.split(key, 2)
+        system_params = self.system.init_params(init_key)
         return iCemOptimizerState(
+            system_params=system_params,
             best_sequence=jnp.zeros(self.opt_dim),
             best_reward=jnp.zeros(1).squeeze(),
-            key=init_key,
+            key=key,
         )
 
     @partial(jax.jit, static_argnums=0)
@@ -200,14 +206,14 @@ class iCemTO(BaseOptimizer[iCemOptimizerState, iCemOptimizerState]):
             self,
             initial_state: chex.Array,
             opt_state: iCemOptimizerState,
-            system_params: SystemParams,
     ):
+        assert self.system is not None, "iCem optimizer requires system to be defined."
         initial_state = jnp.repeat(jnp.expand_dims(initial_state, 0), self.opt_params.num_particles, 0)
 
         def objective(seq):
             optimize_fn = lambda x: rollout_actions(
                 system=self.system,
-                system_params=system_params,
+                system_params=opt_state.system_params,
                 init_state=x,
                 horizon=self.horizon,
                 actions=seq,
@@ -279,8 +285,8 @@ class iCemTO(BaseOptimizer[iCemOptimizerState, iCemOptimizerState]):
         new_opt_state = new_opt_state.replace(best_sequence=outs[1][-1, ...], best_reward=outs[0][-1, ...])
         return new_opt_state
 
-    def act(self, obs: chex.Array, opt_state: iCemOptimizerState, system_params: SystemParams, evaluate: bool = True):
-        new_opt_state = self.optimize(initial_state=obs, opt_state=opt_state, system_params=system_params)
+    def act(self, obs: chex.Array, opt_state: iCemOptimizerState, evaluate: bool = True):
+        new_opt_state = self.optimize(initial_state=obs, opt_state=opt_state)
         return new_opt_state.action, new_opt_state
 
 

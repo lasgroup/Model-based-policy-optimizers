@@ -83,9 +83,9 @@ def rollout_policy(
         sys_params = carry[1]
         policy_param = carry[-1]
         if stop_grads:
-            acs, new_policy_state = policy(policy_param, jax.lax.stop_gradient(obs))
+            acs, new_policy_state = policy(jax.lax.stop_gradient(obs), policy_param)
         else:
-            acs, new_policy_state = policy(policy_param, obs)
+            acs, new_policy_state = policy(obs, policy_param)
         system_output = system.step(
             x=obs,
             u=acs,

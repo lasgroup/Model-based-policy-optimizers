@@ -1,7 +1,7 @@
 import functools
 import math
 from copy import deepcopy
-from typing import Union, Callable, Sequence, Tuple, Any
+from typing import Union, Callable, Sequence, Tuple, Any, Generic
 
 import chex
 import distrax
@@ -21,6 +21,9 @@ from mbpo.optimizers.base_optimizer import BaseOptimizer
 from mbpo.systems import SystemParams
 from mbpo.utils.network_utils import MLP
 from mbpo.utils.optimizer_utils import rollout_policy, lambda_return, soft_update
+from mbpo.utils.type_aliases import OptimizerState, OptimizerTrainingOutPut
+from mbpo.systems.dynamics.base_dynamics import DynamicsParams
+from mbpo.systems.rewards.base_rewards import RewardParams
 
 EPS = 1e-8
 
@@ -75,7 +78,7 @@ class Normalizer:
 
 
 @chex.dataclass
-class BPTTState:
+class BPTTState(OptimizerState, Generic[DynamicsParams, RewardParams]):
     actor_opt_state: optax.OptState
     actor_params: Any
     critic_opt_state: optax.OptState
@@ -97,8 +100,8 @@ class BPTTAgentSummary:
 
 
 @chex.dataclass
-class BPTTTrainingOutput:
-    bptt_state: BPTTState
+class BPTTTrainingOutput(OptimizerTrainingOutPut):
+    optimizer_state: BPTTState[DynamicsParams, RewardParams]
     bptt_summary: BPTTAgentSummary
 
 
@@ -207,40 +210,20 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
         super().__init__(*args, **kwargs)
         self.state_normalizer = Normalizer((obs_dim,))
         self.reward_normalizer = Normalizer((1,))
-        sample_obs = jnp.ones(obs_dim, )
         self.actor = Actor(features=actor_features, action_dim=action_dim, init_stddev=init_stddev,
                            activation=policy_activation)
         self.critic = Critic(features=critic_features, activation=critic_activation)
         actor_rng, critic_rng, rng = jax.random.split(rng, 3)
-        critic_params = self.critic.init(critic_rng, sample_obs)
-
-        actor_params = self.actor.init(actor_rng, sample_obs, )
-
         self.actor_optimizer = \
             optax.apply_if_finite(optax.adamw(learning_rate=lr_actor, weight_decay=weight_decay_actor),
                                   10000000
                                   )
-        actor_opt_state = self.actor_optimizer.init(actor_params)
         self.critic_optimizer = optax.apply_if_finite(
             optax.adamw(learning_rate=lr_critic, weight_decay=weight_decay_critic),
             10000000
         )
-        critic_opt_state = self.critic_optimizer.init(critic_params)
-        target_critic_params = deepcopy(critic_params)
-        state_normalizer_state = self.state_normalizer.initialize_normalizer_state()
-        reward_normalizer_state = self.reward_normalizer.initialize_normalizer_state()
 
         init_state_rng, rng = jax.random.split(rng, 2)
-        self.init_state = BPTTState(
-            actor_opt_state=actor_opt_state,
-            actor_params=actor_params,
-            critic_opt_state=critic_opt_state,
-            critic_params=critic_params,
-            target_critic_params=target_critic_params,
-            state_normalizer_state=state_normalizer_state,
-            reward_normalizer_state=reward_normalizer_state,
-            key=init_state_rng
-        )
 
         self.horizon = horizon
         self.num_samples_per_gradient_update = num_samples_per_gradient_update
@@ -261,7 +244,7 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
         self.use_best_trained_policy = use_best_trained_policy
         self.loss_ent_coefficient = loss_ent_coefficient
         self.critic_updates_per_policy_updates = critic_updates_per_policy_update
-        self.train_policy = lambda opt_state, obs: self.act(opt_state, obs, evaluate=False)
+        self.train_policy = lambda obs, opt_state: self.act(obs, opt_state, evaluate=False)
         dummy_transition = Transition(
             observation=jnp.zeros(self.obs_dim),
             action=jnp.zeros(self.action_dim),
@@ -280,8 +263,30 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
 
         self._unflatten_fn = jax.vmap(self._unflatten_fn)
 
-    def init_optimizer_state(self):
-        return self.init_state
+    def init(self,
+             key: chex.PRNGKey) -> BPTTState:
+        assert self.system is not None, "BPTT optimizer requires system to be defined."
+        sample_obs = jnp.ones(self.obs_dim, )
+        critic_key, actor_key, system_key, key = jax.random.split(key, 4)
+        critic_params = self.critic.init(critic_key, sample_obs)
+        critic_opt_state = self.critic_optimizer.init(critic_params)
+        target_critic_params = deepcopy(critic_params)
+        actor_params = self.actor.init(actor_key, sample_obs)
+        actor_opt_state = self.actor_optimizer.init(actor_params)
+        state_normalizer_state = self.state_normalizer.initialize_normalizer_state()
+        reward_normalizer_state = self.reward_normalizer.initialize_normalizer_state()
+        system_params = self.system.init_params(system_key)
+        return BPTTState(
+            system_params=system_params,
+            actor_opt_state=actor_opt_state,
+            actor_params=actor_params,
+            critic_opt_state=critic_opt_state,
+            critic_params=critic_params,
+            target_critic_params=target_critic_params,
+            state_normalizer_state=state_normalizer_state,
+            reward_normalizer_state=reward_normalizer_state,
+            key=key
+        )
 
     def update_normalizers(self, transition: Transition, bptt_state: BPTTState):
         state_normalizer_state = self.state_normalizer.update(transition.observation, bptt_state.state_normalizer_state)
@@ -292,7 +297,7 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
         return new_bptt_state
 
     @functools.partial(jax.jit, static_argnums=(0, 3))
-    def act(self, opt_state: BPTTState, obs: chex.Array, evaluate: bool = True, *args, **kwargs) -> \
+    def act(self, obs: chex.Array, opt_state: BPTTState, evaluate: bool = True, *args, **kwargs) -> \
             Tuple[chex.Array, BPTTState]:
 
         normalized_obs = self.state_normalizer.normalize(obs, opt_state.state_normalizer_state)
@@ -341,16 +346,18 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
         actor_loss = -(lambda_values * disc).mean() + entropy_loss * self.loss_ent_coefficient
         return actor_loss, entropy_loss, lambda_values, trajectory
 
-    def _train_step(self, initial_states: chex.Array, bptt_state: BPTTState, system_params: SystemParams):
+    def _train_step(self, initial_states: chex.Array, bptt_state: BPTTState):
 
         sampling_key, key = jax.random.split(bptt_state.key, 2)
+        system_params = bptt_state.system_params
         sys_sampling_key, sys_key = jax.random.split(system_params.key, 2)
 
         def actor_loss_fn(params):
             opt_state = bptt_state.replace(actor_params=params, key=sampling_key)
-            sys_state = system_params.replace(key=sys_sampling_key)
-            actor_loss, entropy_loss, lambda_values, trajectory = jax.vmap(self.actor_loss, in_axes=(0, None, None))(
-                initial_states, opt_state, sys_state)
+            sys_params = system_params.replace(key=sys_sampling_key)
+            actor_loss, entropy_loss, lambda_values, trajectory = jax.vmap(
+                self.actor_loss,
+                in_axes=(0, None, None))(initial_states, opt_state, sys_params)
 
             def flatten_array(x):
                 out = x.reshape(-1, x.shape[-1]) if x.ndim > 2 else x.reshape(-1)
@@ -420,17 +427,17 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
             critic_loss=critic_loss,
         )
         system_params = system_params.replace(key=sys_key)
-        return new_bptt_state, summary, trajectories, system_params
+        new_bptt_state = new_bptt_state.replace(system_params=system_params)
+        return new_bptt_state, summary, trajectories
 
     @functools.partial(jax.jit, static_argnums=(0,))
     def train(self,
               buffer_state: ReplayBufferState,
               bptt_state: BPTTState,
-              system_params: SystemParams,
               *args,
               **kwargs,
               ) -> BPTTTrainingOutput:
-
+        assert self.system is not None, "BPTT optimizer requires system to be defined."
         train_key, key = jax.random.split(bptt_state.key, 2)
         eval_rng, train_key = jax.random.split(train_key, 2)
         eval_idx = jax.random.randint(eval_rng, (self.evaluation_samples,), minval=buffer_state.sample_position,
@@ -450,17 +457,17 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
             return initial_obs, new_buff_state
 
         def step(carry, ins):
-            opt_state, best_opt_state, system_params, buffer_key, prev_summary = carry[0], carry[1], carry[2], \
-                carry[3], carry[4]
-            buff_state = carry[5]
+            opt_state, best_opt_state, buffer_key, prev_summary = carry[0], carry[1], carry[2], \
+                carry[3]
+            system_params = opt_state.system_params
+            buff_state = carry[4]
             prev_reward = prev_summary.reward
             best_reward = prev_summary.best_reward
 
             initial_obs, new_buff_state = sample_obs(buff_state)
-            new_opt_state, summary, transitions, new_system_params = self._train_step(
+            new_opt_state, summary, transitions = self._train_step(
                 initial_states=initial_obs,
                 bptt_state=opt_state,
-                system_params=system_params,
             )
             if self.normalize:
                 new_opt_state = self.update_normalizers(transitions, bptt_state=new_opt_state)
@@ -508,11 +515,12 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
                 reward = prev_reward
                 new_best_reward, new_best_opt_state = reward, new_opt_state
             summary = summary.replace(reward=reward, best_reward=new_best_reward)
-            carry = [new_opt_state, new_best_opt_state, new_system_params, key, summary, new_buff_state]
+            new_best_opt_state = new_best_opt_state.replace(system_params=new_opt_state.system_params)
+            carry = [new_opt_state, new_best_opt_state, key, summary, new_buff_state]
             outs = summary
             return carry, outs
 
-        carry = [train_bptt_state, train_bptt_state, system_params, buffer_key, BPTTAgentSummary(),
+        carry = [train_bptt_state, train_bptt_state, buffer_key, BPTTAgentSummary(),
                  train_buffer_state]
         xs = jnp.arange(self.train_steps)
         carry, outs = jax.lax.scan(step, carry, xs=xs, length=self.train_steps)
@@ -522,7 +530,7 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
         else:
             trained_state = carry[0]
         output = BPTTTrainingOutput(
-            bptt_state=trained_state,
+            optimizer_state=trained_state,
             bptt_summary=outs,
         )
         return output

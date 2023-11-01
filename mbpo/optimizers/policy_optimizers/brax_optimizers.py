@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Tuple, List
+from typing import Tuple, List, Generic
 
 import chex
 import jax.random as jr
@@ -11,21 +11,23 @@ from jaxtyping import PyTree
 from mbpo.optimizers.base_optimizer import BaseOptimizer
 from mbpo.optimizers.policy_optimizers.ppo.ppo import PPO
 from mbpo.optimizers.policy_optimizers.sac.sac import SAC
-from mbpo.systems.base_systems import System, SystemParams
+from mbpo.systems.base_systems import System
 from mbpo.systems.brax_wrapper import BraxWrapper
+from mbpo.utils.type_aliases import OptimizerState, OptimizerTrainingOutPut
+from mbpo.systems.rewards.base_rewards import RewardParams
+from mbpo.systems.dynamics.base_dynamics import DynamicsParams
 
 
 @chex.dataclass
-class BraxState:
-    system_params: SystemParams
+class BraxState(OptimizerState, Generic[DynamicsParams, RewardParams]):
     true_buffer_state: ReplayBufferState
     policy_params: PyTree
     key: chex.PRNGKey
 
 
 @chex.dataclass
-class BraxOutput:
-    state: BraxState
+class BraxOutput(OptimizerTrainingOutPut, Generic[DynamicsParams, RewardParams]):
+    optimizer_state: BraxState[DynamicsParams, RewardParams]
     summary: List[types.Metrics]
 
 
@@ -41,17 +43,28 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
         self.agent_kwargs = agent_kwargs
         self.true_buffer = true_buffer
         self.dummy_true_buffer_state = dummy_true_buffer_state
+        if system is None:
+            self.dummy_trainer = None
+            self.make_policy = None
+        else:
+            self.set_system(system)
+
+    def set_system(self, system: System):
+        super().set_system(system)
         dummy_env = BraxWrapper(system=self.system,
                                 system_params=self.system.init_params(jr.PRNGKey(0)),
-                                sample_buffer_state=dummy_true_buffer_state,
+                                sample_buffer_state=self.dummy_true_buffer_state,
                                 sample_buffer=self.true_buffer)
         self.dummy_trainer = self.agent_class(environment=dummy_env, **self.agent_kwargs)
         self.make_policy = self.dummy_trainer.make_policy
 
     def init(self,
              key: chex.PRNGKey,
-             true_buffer_state: ReplayBufferState) -> BraxState:
+             true_buffer_state: ReplayBufferState | None = None) -> BraxState:
+        assert self.system is not None, "Brax optimizer requires system to be defined."
         keys = jr.split(key, 3)
+        if true_buffer_state is None:
+            true_buffer_state = self.dummy_true_buffer_state
         system_params = self.system.init_params(keys[0])
         training_state = self.dummy_trainer.init_training_state(keys[1])
         return BraxState(system_params=system_params,
@@ -59,12 +72,12 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
                          policy_params=training_state.get_policy_params(),
                          key=keys[2])
 
-    @partial(jit, static_argnums=(0, 4))
+    @partial(jit, static_argnums=(0, 3))
     def act(self,
             obs: chex.Array,
-            opt_state: BraxState,
-            system_params: SystemParams,
-            evaluate: bool = True) -> Tuple[chex.Array, BraxState]:
+            opt_state: BraxState[DynamicsParams, RewardParams],
+            evaluate: bool = True) -> Tuple[chex.Array, BraxState[DynamicsParams, RewardParams]]:
+        assert self.system is not None, "Brax optimizer requires system to be defined."
         policy = self.make_policy(opt_state.policy_params, evaluate)
         key, subkey = jr.split(opt_state.key)
         action = policy(obs, subkey)[0]
@@ -75,6 +88,7 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
               opt_state: BraxState,
               *args,
               **kwargs) -> BraxOutput:
+        assert self.system is not None, "Brax optimizer requires system to be defined."
         env = BraxWrapper(system=self.system,
                           system_params=opt_state.system_params,
                           sample_buffer_state=opt_state.true_buffer_state,
@@ -84,7 +98,7 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
         key, new_key = jr.split(opt_state.key)
         policy_params, metrics = trainer.run_training(key=new_key)
         new_opt_state = opt_state.replace(policy_params=policy_params, key=new_key)
-        return BraxOutput(state=new_opt_state, summary=metrics)
+        return BraxOutput(optimizer_state=new_opt_state, summary=metrics)
 
 
 class PPOOptimizer(BraxOptimizer):

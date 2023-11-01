@@ -66,12 +66,12 @@ sac_output = optimizer.train(opt_state=init_optimizer_state)
 
 
 def policy(x):
-    return optimizer.act(x, sac_output.state, sac_output.state.system_params, evaluate=True)
+    return optimizer.act(x, sac_output.optimizer_state, evaluate=True)
 
 
 def step(x, _):
     u = policy(x)[0]
-    next_sys_state = system.step(x, u, sac_output.state.system_params)
+    next_sys_state = system.step(x, u, sac_output.optimizer_state.system_params)
     return next_sys_state.x_next, (x, u, next_sys_state.reward)
 
 

@@ -13,7 +13,7 @@ key = jax.random.PRNGKey(seed=0)
 reset_key, key = jax.random.split(key, 2)
 # Create replay buffer
 init_sys_state = system.reset(rng=reset_key)
-sample_key, key = jax.random.split(key, 2)
+sample_key, optimizer_init_key, key = jax.random.split(key, 3)
 num_samples = 1
 
 
@@ -48,7 +48,6 @@ sample = Transition(observation=obs,
 sampling_buffer_state = sampling_buffer.insert(sampling_buffer_state, sample)
 
 optimizer = BPTTOptimizer(
-    system=system,
     action_dim=1,
     obs_dim=3,
     horizon=20,
@@ -59,14 +58,14 @@ optimizer = BPTTOptimizer(
     critic_updates_per_policy_update=1,
     use_best_trained_policy=True,
 )
-
+optimizer.set_system(system=system)
+bptt_state = optimizer.init(key=optimizer_init_key)
 output = optimizer.train(
     buffer_state=sampling_buffer_state,
-    bptt_state=optimizer.init_state,
-    system_params=init_sys_state.system_params,
+    bptt_state=bptt_state,
 )
 
-bptt_state = output.bptt_state
+bptt_state = output.optimizer_state
 
 
 def rollout_bptt(carry, ins):
@@ -85,3 +84,6 @@ carry, outs = scan(rollout_bptt, carry, xs=None, length=200)
 
 rewards = outs[-1]
 
+
+def test_optimizer_performance():
+    assert rewards.sum() >= -400
