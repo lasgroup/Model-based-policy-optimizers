@@ -176,8 +176,8 @@ class Critic(nn.Module):
 class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
 
     def __init__(self,
-                 action_dim: int,
                  obs_dim: int,
+                 action_dim: int,
                  horizon: int = 20,
                  num_samples_per_gradient_update: int = 10,
                  train_steps: int = 20,
@@ -208,9 +208,11 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
                  **kwargs,
                  ):
         super().__init__(*args, **kwargs)
-        self.state_normalizer = Normalizer((obs_dim,))
+        self.obs_dim = obs_dim
+        self.action_dim = action_dim
+        self.state_normalizer = Normalizer((self.obs_dim,))
         self.reward_normalizer = Normalizer((1,))
-        self.actor = Actor(features=actor_features, action_dim=action_dim, init_stddev=init_stddev,
+        self.actor = Actor(features=actor_features, action_dim=self.action_dim, init_stddev=init_stddev,
                            activation=policy_activation)
         self.critic = Critic(features=critic_features, activation=critic_activation)
         actor_rng, critic_rng, rng = jax.random.split(rng, 3)
@@ -230,8 +232,6 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
         self.sample_simulated_transitions = sample_simulated_transitions
         self.normalize = normalize
         self.action_normalize = action_normalize
-        self.obs_dim = obs_dim
-        self.action_dim = action_dim
         self.train_steps = train_steps
         self.reset_optimizer = reset_optimizer
         self.evaluate_agent = evaluation_frequency > 0
@@ -264,9 +264,12 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
         self._unflatten_fn = jax.vmap(self._unflatten_fn)
 
     def init(self,
-             key: chex.PRNGKey) -> BPTTState:
+             key: chex.PRNGKey,
+             true_buffer_state: ReplayBufferState | None = None) -> BPTTState:
         assert self.system is not None, "BPTT optimizer requires system to be defined."
-        sample_obs = jnp.ones(self.obs_dim, )
+        assert self.system.x_dim == self.obs_dim and self.system.u_dim == self.action_dim, \
+            "input and action dimensions do not match with the system"
+        sample_obs = jnp.ones(self.system.x_dim, )
         critic_key, actor_key, system_key, key = jax.random.split(key, 4)
         critic_params = self.critic.init(critic_key, sample_obs)
         critic_opt_state = self.critic_optimizer.init(critic_params)
@@ -276,7 +279,11 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
         state_normalizer_state = self.state_normalizer.initialize_normalizer_state()
         reward_normalizer_state = self.reward_normalizer.initialize_normalizer_state()
         system_params = self.system.init_params(system_key)
+        if true_buffer_state is None:
+            dummy_buffer_key, key = jax.random.split(key, 2)
+            true_buffer_state = self.dummy_true_buffer_state(dummy_buffer_key)
         return BPTTState(
+            true_buffer_state=true_buffer_state,
             system_params=system_params,
             actor_opt_state=actor_opt_state,
             actor_params=actor_params,
@@ -319,7 +326,7 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
             return squash_action(action), new_opt_state
 
     def actor_loss(self, init_state: chex.Array, bptt_state: BPTTState, system_params: SystemParams):
-        chex.assert_shape(init_state, (self.obs_dim,))
+        chex.assert_shape(init_state, (self.system.x_dim,))
         trajectory = rollout_policy(
             system=self.system,
             system_params=system_params,
@@ -432,12 +439,10 @@ class BPTTOptimizer(BaseOptimizer[BPTTState, BPTTTrainingOutput]):
 
     @functools.partial(jax.jit, static_argnums=(0,))
     def train(self,
-              buffer_state: ReplayBufferState,
               bptt_state: BPTTState,
-              *args,
-              **kwargs,
               ) -> BPTTTrainingOutput:
         assert self.system is not None, "BPTT optimizer requires system to be defined."
+        buffer_state = bptt_state.true_buffer_state
         train_key, key = jax.random.split(bptt_state.key, 2)
         eval_rng, train_key = jax.random.split(train_key, 2)
         eval_idx = jax.random.randint(eval_rng, (self.evaluation_samples,), minval=buffer_state.sample_position,

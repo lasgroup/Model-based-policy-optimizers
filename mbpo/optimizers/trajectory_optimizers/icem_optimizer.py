@@ -192,9 +192,11 @@ class iCemTO(BaseOptimizer, Generic[DynamicsParams, RewardParams]):
 
     def init(self, key: chex.Array):
         assert self.system is not None, "iCem optimizer requires system to be defined."
-        init_key, key = jax.random.split(key, 2)
+        init_key, dummy_buffer_key, key = jax.random.split(key, 3)
         system_params = self.system.init_params(init_key)
+        dummy_buffer_state = self.dummy_true_buffer_state(dummy_buffer_key)
         return iCemOptimizerState(
+            true_buffer_state=dummy_buffer_state,
             system_params=system_params,
             best_sequence=jnp.zeros(self.opt_dim),
             best_reward=jnp.zeros(1).squeeze(),

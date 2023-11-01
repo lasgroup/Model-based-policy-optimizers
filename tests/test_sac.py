@@ -29,7 +29,6 @@ sampling_buffer_state = sampling_buffer.insert(sampling_buffer_state,
 # Create MBPO environment
 optimizer = SACOptimizer(system=system,
                          true_buffer=sampling_buffer,
-                         dummy_true_buffer_state=sampling_buffer_state,
                          num_timesteps=20_000,
                          num_evals=20,
                          reward_scaling=1,

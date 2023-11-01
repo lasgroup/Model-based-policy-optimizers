@@ -29,7 +29,6 @@ sampling_buffer_state = sampling_buffer.insert(sampling_buffer_state,
 # Create MBPO environment
 optimizer = PPOOptimizer(system=system,
                          true_buffer=sampling_buffer,
-                         dummy_true_buffer_state=sampling_buffer_state,
                          num_timesteps=1_000_000,
                          episode_length=200,
                          action_repeat=1,

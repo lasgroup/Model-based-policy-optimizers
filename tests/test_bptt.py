@@ -59,9 +59,8 @@ optimizer = BPTTOptimizer(
     use_best_trained_policy=True,
 )
 optimizer.set_system(system=system)
-bptt_state = optimizer.init(key=optimizer_init_key)
+bptt_state = optimizer.init(key=optimizer_init_key, true_buffer_state=sampling_buffer_state)
 output = optimizer.train(
-    buffer_state=sampling_buffer_state,
     bptt_state=bptt_state,
 )
 

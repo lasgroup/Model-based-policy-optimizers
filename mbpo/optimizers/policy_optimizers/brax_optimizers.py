@@ -20,7 +20,6 @@ from mbpo.systems.dynamics.base_dynamics import DynamicsParams
 
 @chex.dataclass
 class BraxState(OptimizerState, Generic[DynamicsParams, RewardParams]):
-    true_buffer_state: ReplayBufferState
     policy_params: PyTree
     key: chex.PRNGKey
 
@@ -36,13 +35,11 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
                  agent_class,
                  system: System,
                  true_buffer: UniformSamplingQueue,
-                 dummy_true_buffer_state: ReplayBufferState,
                  **agent_kwargs):
         super().__init__(system)
         self.agent_class = agent_class
         self.agent_kwargs = agent_kwargs
         self.true_buffer = true_buffer
-        self.dummy_true_buffer_state = dummy_true_buffer_state
         if system is None:
             self.dummy_trainer = None
             self.make_policy = None
@@ -50,10 +47,12 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
             self.set_system(system)
 
     def set_system(self, system: System):
+        self.key, sys_key, buffer_key = jr.split(self.key, 3)
+        dummy_true_buffer_state = self.dummy_true_buffer_state(buffer_key)
         super().set_system(system)
         dummy_env = BraxWrapper(system=self.system,
-                                system_params=self.system.init_params(jr.PRNGKey(0)),
-                                sample_buffer_state=self.dummy_true_buffer_state,
+                                system_params=self.system.init_params(sys_key),
+                                sample_buffer_state=dummy_true_buffer_state,
                                 sample_buffer=self.true_buffer)
         self.dummy_trainer = self.agent_class(environment=dummy_env, **self.agent_kwargs)
         self.make_policy = self.dummy_trainer.make_policy
@@ -62,9 +61,10 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
              key: chex.PRNGKey,
              true_buffer_state: ReplayBufferState | None = None) -> BraxState:
         assert self.system is not None, "Brax optimizer requires system to be defined."
-        keys = jr.split(key, 3)
         if true_buffer_state is None:
-            true_buffer_state = self.dummy_true_buffer_state
+            dummy_buffer_key, key = jr.split(key, 2)
+            true_buffer_state = self.dummy_true_buffer_state(dummy_buffer_key)
+        keys = jr.split(key, 3)
         system_params = self.system.init_params(keys[0])
         training_state = self.dummy_trainer.init_training_state(keys[1])
         return BraxState(system_params=system_params,
@@ -85,9 +85,8 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
 
     # @partial(jit, static_argnums=(0,))
     def train(self,
-              opt_state: BraxState,
-              *args,
-              **kwargs) -> BraxOutput:
+              opt_state: BraxState
+              ) -> BraxOutput:
         assert self.system is not None, "Brax optimizer requires system to be defined."
         env = BraxWrapper(system=self.system,
                           system_params=opt_state.system_params,
@@ -105,17 +104,13 @@ class PPOOptimizer(BraxOptimizer):
     def __init__(self,
                  system: System,
                  true_buffer: UniformSamplingQueue,
-                 dummy_true_buffer_state: ReplayBufferState,
                  **ppo_kwargs):
-        super().__init__(agent_class=PPO, system=system, true_buffer=true_buffer,
-                         dummy_true_buffer_state=dummy_true_buffer_state, **ppo_kwargs)
+        super().__init__(agent_class=PPO, system=system, true_buffer=true_buffer, **ppo_kwargs)
 
 
 class SACOptimizer(BraxOptimizer):
     def __init__(self,
                  system: System,
                  true_buffer: UniformSamplingQueue,
-                 dummy_true_buffer_state: ReplayBufferState,
                  **sac_kwargs):
-        super().__init__(agent_class=SAC, system=system, true_buffer=true_buffer,
-                         dummy_true_buffer_state=dummy_true_buffer_state, **sac_kwargs)
+        super().__init__(agent_class=SAC, system=system, true_buffer=true_buffer, **sac_kwargs)
