@@ -69,6 +69,7 @@ class SAC:
                  wd_alpha: float = 0.,
                  wd_policy: float = 0.,
                  wd_q: float = 0.,
+                 max_grad_norm: float = 1e5,
                  discounting: float = 0.9,
                  batch_size: int = 256,
                  num_evals: int = 1,
@@ -166,9 +167,18 @@ class SAC:
 
         self.make_policy = make_inference_fn(self.sac_networks_model.get_sac_networks())
 
-        self.alpha_optimizer = optax.adamw(learning_rate=lr_alpha, weight_decay=wd_alpha)
-        self.policy_optimizer = optax.adamw(learning_rate=lr_policy, weight_decay=wd_policy)
-        self.q_optimizer = optax.adamw(learning_rate=lr_q, weight_decay=wd_q)
+        self.alpha_optimizer = optax.chain(
+            optax.clip_by_global_norm(max_norm=max_grad_norm),
+            optax.adamw(learning_rate=lr_alpha, weight_decay=wd_alpha)
+        )
+        self.policy_optimizer = optax.chain(
+            optax.clip_by_global_norm(max_norm=max_grad_norm),
+            optax.adamw(learning_rate=lr_policy, weight_decay=wd_policy)
+        )
+        self.q_optimizer = optax.chain(
+            optax.clip_by_global_norm(max_norm=max_grad_norm),
+            optax.adamw(learning_rate=lr_q, weight_decay=wd_q)
+        )
 
         # Set this to None unless you want to use parallelism across multiple devices.
         self._PMAP_AXIS_NAME = None
