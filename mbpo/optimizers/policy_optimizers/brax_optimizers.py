@@ -21,7 +21,6 @@ from mbpo.systems.dynamics.base_dynamics import DynamicsParams
 @chex.dataclass
 class BraxState(OptimizerState, Generic[DynamicsParams, RewardParams]):
     policy_params: PyTree
-    key: chex.PRNGKey
 
 
 @chex.dataclass

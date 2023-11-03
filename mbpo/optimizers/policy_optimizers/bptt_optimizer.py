@@ -86,7 +86,6 @@ class BPTTState(OptimizerState, Generic[DynamicsParams, RewardParams]):
     target_critic_params: Any
     state_normalizer_state: NormalizerState
     reward_normalizer_state: NormalizerState
-    key: jax.random.PRNGKeyArray
 
 
 @chex.dataclass

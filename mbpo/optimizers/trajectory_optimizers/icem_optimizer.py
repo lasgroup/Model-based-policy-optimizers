@@ -169,7 +169,6 @@ class iCemParams(NamedTuple):
 class iCemOptimizerState(OptimizerState, Generic[DynamicsParams, RewardParams]):
     best_sequence: chex.Array
     best_reward: chex.Array
-    key: jax.random.PRNGKey
 
     @property
     def action(self):
