@@ -32,8 +32,8 @@ class BraxOutput(OptimizerTrainingOutPut, Generic[DynamicsParams, RewardParams])
 class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
     def __init__(self,
                  agent_class,
-                 system: System,
                  true_buffer: UniformSamplingQueue,
+                 system: System | None = None,
                  **agent_kwargs):
         super().__init__(system)
         self.agent_class = agent_class
@@ -46,9 +46,9 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
             self.set_system(system)
 
     def set_system(self, system: System):
+        super().set_system(system)
         self.key, sys_key, buffer_key = jr.split(self.key, 3)
         dummy_true_buffer_state = self.dummy_true_buffer_state(buffer_key)
-        super().set_system(system)
         dummy_env = BraxWrapper(system=self.system,
                                 system_params=self.system.init_params(sys_key),
                                 sample_buffer_state=dummy_true_buffer_state,
@@ -101,7 +101,6 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
 
 class PPOOptimizer(BraxOptimizer):
     def __init__(self,
-                 system: System,
                  true_buffer: UniformSamplingQueue,
                  **ppo_kwargs):
         super().__init__(agent_class=PPO, system=system, true_buffer=true_buffer, **ppo_kwargs)
@@ -109,7 +108,7 @@ class PPOOptimizer(BraxOptimizer):
 
 class SACOptimizer(BraxOptimizer):
     def __init__(self,
-                 system: System,
                  true_buffer: UniformSamplingQueue,
+                 system: System | None = None,
                  **sac_kwargs):
         super().__init__(agent_class=SAC, system=system, true_buffer=true_buffer, **sac_kwargs)
