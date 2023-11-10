@@ -102,6 +102,7 @@ class BraxOptimizer(BaseOptimizer[BraxState, BraxOutput]):
 class PPOOptimizer(BraxOptimizer):
     def __init__(self,
                  true_buffer: UniformSamplingQueue,
+                 system: System | None = None,
                  **ppo_kwargs):
         super().__init__(agent_class=PPO, system=system, true_buffer=true_buffer, **ppo_kwargs)
 
