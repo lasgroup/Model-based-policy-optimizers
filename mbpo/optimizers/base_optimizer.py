@@ -12,7 +12,7 @@ from brax.training.types import Transition
 
 
 class BaseOptimizer(ABC, Generic[RewardParams, DynamicsParams]):
-    def __init__(self, system: System | None = None, key: jr.PRNGKeyArray = jr.PRNGKey(0)):
+    def __init__(self, system: System | None = None, key: jr.PRNGKey = jr.PRNGKey(0)):
         self.system = system
         self.key = key
         pass

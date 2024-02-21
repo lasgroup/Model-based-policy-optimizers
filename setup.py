@@ -16,8 +16,8 @@ required = [
     'argparse-dataclass>=0.2.1',
     'jaxutils',
     'chex',
+    'brax',
     'distrax @ git+https://github.com/deepmind/distrax.git',
-    'brax @ git+https://git@github.com/lenarttreven/brax.git',
     'trajax @ git+https://git@github.com/lenarttreven/trajax.git',
     'bsm @ git+https://github.com/lasgroup/bayesian_statistical_models.git',
 ]
@@ -25,7 +25,7 @@ required = [
 extras = {}
 setup(
     name='mbpo',
-    version='0.0.1',
+    version='0.0.2',
     license="MIT",
     packages=find_packages(),
     python_requires='>=3.9',
