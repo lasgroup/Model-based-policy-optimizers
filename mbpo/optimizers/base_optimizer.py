@@ -21,19 +21,24 @@ class BaseOptimizer(ABC, Generic[RewardParams, DynamicsParams]):
         self.system = system
 
     @abstractmethod
-    def act(self, obs: chex.Array, opt_state: OptimizerState[RewardParams, DynamicsParams], evaluate: bool = True) -> \
-            Tuple[chex.Array, OptimizerState]:
+    def act(self,
+            obs: chex.Array,
+            opt_state: OptimizerState[RewardParams, DynamicsParams],
+            evaluate: bool = True) -> Tuple[chex.Array, OptimizerState]:
         pass
 
-    def train(self, opt_state: OptimizerState[RewardParams, DynamicsParams]) \
-            -> OptimizerTrainingOutPut[RewardParams, DynamicsParams]:
+    def train(self,
+              opt_state: OptimizerState[RewardParams, DynamicsParams]) -> OptimizerTrainingOutPut[
+        RewardParams, DynamicsParams]:
         return OptimizerTrainingOutPut(optimizer_state=opt_state)
 
     def init(self,
-             key: chex.PRNGKey) -> OptimizerState:
+             key: chex.PRNGKey,
+             true_buffer_state: ReplayBufferState | None = None) -> OptimizerState:
         pass
 
-    def dummy_true_buffer_state(self, key: chex.Array) -> ReplayBufferState:
+    def dummy_true_buffer_state(self,
+                                key: chex.Array) -> ReplayBufferState:
         assert self.system is not None, "Base optimizer requires system to be defined."
         dummy_transition = Transition(
             observation=jnp.zeros(self.system.x_dim),
