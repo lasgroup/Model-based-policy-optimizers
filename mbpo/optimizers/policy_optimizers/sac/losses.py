@@ -89,7 +89,7 @@ class SACLosses:
             pseudo_time_for_action = transitions.action[..., -1]
             t_lower = self.min_time_between_switches
             t_upper = self.max_time_between_switches
-            time_for_action = ((t_upper - t_lower) / 2 * pseudo_time_for_action + (t_upper + t_lower) / 2).reshape()
+            time_for_action = ((t_upper - t_lower) / 2 * pseudo_time_for_action + (t_upper + t_lower) / 2)
             discounting = jnp.exp(- self.continuous_discounting * time_for_action)
         else:
             discounting = self.discounting
