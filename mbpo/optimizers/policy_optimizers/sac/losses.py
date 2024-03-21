@@ -30,8 +30,17 @@ Transition = types.Transition
 
 
 class SACLosses:
-    def __init__(self, sac_network: SACNetworks, reward_scaling: float,
-                 discounting: float, u_dim: int, target_entropy: float | None = None):
+    def __init__(self,
+                 sac_network: SACNetworks,
+                 reward_scaling: float,
+                 discounting: float,
+                 u_dim: int,
+                 target_entropy: float | None = None,
+                 non_equidistant_time: bool = False,
+                 continuous_discounting: float = 0,
+                 min_time_between_switches: float = 0,
+                 max_time_between_switches: float = 0,
+                 ):
         self.sac_network = sac_network
         self.reward_scaling = reward_scaling
         self.discounting = discounting
@@ -42,6 +51,10 @@ class SACLosses:
         self.policy_network = self.sac_network.policy_network
         self.q_network = self.sac_network.q_network
         self.parametric_action_distribution = self.sac_network.parametric_action_distribution
+        self.non_equidistant_time = non_equidistant_time
+        self.continuous_discounting = continuous_discounting
+        self.min_time_between_switches = min_time_between_switches
+        self.max_time_between_switches = max_time_between_switches
 
     def alpha_loss(self, log_alpha: jnp.ndarray, policy_params: Params,
                    normalizer_params: Any, transitions: Transition,
@@ -72,8 +85,17 @@ class SACLosses:
         next_q = self.q_network.apply(normalizer_params, target_q_params,
                                       transitions.next_observation, next_action)
         next_v = jnp.min(next_q, axis=-1) - alpha * next_log_prob
+        if self.non_equidistant_time:
+            pseudo_time_for_action = transitions.action[..., -1]
+            t_lower = self.min_time_between_switches
+            t_upper = self.max_time_between_switches
+            time_for_action = ((t_upper - t_lower) / 2 * pseudo_time_for_action + (t_upper + t_lower) / 2).reshape()
+            discounting = jnp.exp(- self.continuous_discounting * time_for_action)
+        else:
+            discounting = self.discounting
+
         target_q = jax.lax.stop_gradient(transitions.reward * self.reward_scaling +
-                                         transitions.discount * self.discounting *
+                                         transitions.discount * discounting *
                                          next_v)
         q_error = q_old_action - jnp.expand_dims(target_q, -1)
 
