@@ -40,6 +40,7 @@ class SACLosses:
                  continuous_discounting: float = 0,
                  min_time_between_switches: float = 0,
                  max_time_between_switches: float = 0,
+                 env_dt: float = 0,
                  ):
         self.sac_network = sac_network
         self.reward_scaling = reward_scaling
@@ -55,6 +56,7 @@ class SACLosses:
         self.continuous_discounting = continuous_discounting
         self.min_time_between_switches = min_time_between_switches
         self.max_time_between_switches = max_time_between_switches
+        self.env_dt = env_dt
 
     def alpha_loss(self, log_alpha: jnp.ndarray, policy_params: Params,
                    normalizer_params: Any, transitions: Transition,
@@ -90,6 +92,7 @@ class SACLosses:
             t_lower = self.min_time_between_switches
             t_upper = self.max_time_between_switches
             time_for_action = ((t_upper - t_lower) / 2 * pseudo_time_for_action + (t_upper + t_lower) / 2)
+            time_for_action = (time_for_action // self.env_dt) * self.env_dt
             discounting = jnp.exp(- self.continuous_discounting * time_for_action)
         else:
             discounting = self.discounting

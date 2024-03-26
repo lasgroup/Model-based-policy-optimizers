@@ -96,6 +96,7 @@ class SAC:
                  continuous_discounting: float = 0,
                  min_time_between_switches: float = 0,
                  max_time_between_switches: float = 0,
+                 env_dt: float = 0,
                  ):
         if min_replay_size >= num_timesteps:
             raise ValueError(
@@ -214,6 +215,7 @@ class SAC:
                                 continuous_discounting=continuous_discounting,
                                 min_time_between_switches=min_time_between_switches,
                                 max_time_between_switches=max_time_between_switches,
+                                env_dt=env_dt,
                                 )
 
         self.alpha_update = gradient_update_fn(
