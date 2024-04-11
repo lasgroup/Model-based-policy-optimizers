@@ -22,7 +22,7 @@ from jaxtyping import PyTree
 
 from brax.envs.wrappers.training import wrap as wrap_for_training
 
-from mbpo.optimizers.policy_optimizers.ppo.losses import PPOLoss, PPONetworkParams
+from mbpo.optimizers.policy_optimizers.ppo.losses_new import PPOLoss, PPONetworkParams
 from mbpo.optimizers.policy_optimizers.ppo.ppo_network import PPONetworksModel, make_inference_fn
 from mbpo.optimizers.policy_optimizers.sac.utils import gradient_update_fn, metrics_to_float
 
@@ -74,6 +74,11 @@ class PPO:
                  critic_hidden_layer_sizes: Sequence[int] = (64, 64, 64),
                  critic_activation: networks.ActivationFn = nn.swish,
                  wandb_logging: bool = False,
+                 non_equidistant_time: bool = False,
+                 continuous_discounting: float = 0,
+                 min_time_between_switches: float = 0,
+                 max_time_between_switches: float = 0,
+                 env_dt: float = 0,
                  ):
         self.wandb_logging = wandb_logging
         self.episode_length = episode_length
@@ -135,6 +140,11 @@ class PPO:
                                 gae_lambda=self.gae_lambda,
                                 clipping_epsilon=self.clipping_epsilon,
                                 normalize_advantage=self.normalize_advantage,
+                                non_equidistant_time=non_equidistant_time,
+                                continuous_discounting=continuous_discounting,
+                                min_time_between_switches=min_time_between_switches,
+                                max_time_between_switches=max_time_between_switches,
+                                env_dt=env_dt,
                                 )
 
         self.ppo_update = gradient_update_fn(self.ppo_loss.loss, self.optimizer, pmap_axis_name=self._PMAP_AXIS_NAME,
