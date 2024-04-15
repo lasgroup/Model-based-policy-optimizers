@@ -55,6 +55,7 @@ class PPO:
                  num_eval_envs: int = 128,
                  lr: float = 1e-4,
                  wd: float = 1e-5,
+                 max_grad_norm: float = 1e5,
                  entropy_cost: float = 1e-4,
                  discounting: float = 0.9,
                  seed: int = 0,
@@ -131,7 +132,11 @@ class PPO:
             value_activation=critic_activation)
 
         self.make_policy = make_inference_fn(self.ppo_networks_model.get_ppo_networks())
-        self.optimizer = optax.adamw(learning_rate=lr, weight_decay=wd)
+
+        self.optimizer = optax.chain(
+            optax.clip_by_global_norm(max_norm=max_grad_norm),
+            optax.adamw(learning_rate=lr, weight_decay=wd)
+        )
 
         self.ppo_loss = PPOLoss(ppo_network=self.ppo_networks_model.get_ppo_networks(),
                                 entropy_cost=self.entropy_cost,
