@@ -75,6 +75,7 @@ class PPO:
                  critic_hidden_layer_sizes: Sequence[int] = (64, 64, 64),
                  critic_activation: networks.ActivationFn = nn.swish,
                  wandb_logging: bool = False,
+                 return_best_model: bool = False,
                  non_equidistant_time: bool = False,
                  continuous_discounting: float = 0,
                  min_time_between_switches: float = 0,
@@ -82,6 +83,7 @@ class PPO:
                  env_dt: float = 0,
                  ):
         self.wandb_logging = wandb_logging
+        self.return_best_model = return_best_model
         self.episode_length = episode_length
         self.action_repeat = action_repeat
         self.num_timesteps = num_timesteps
@@ -310,6 +312,8 @@ class PPO:
         # Run initial eval
         all_metrics = []
         metrics = {}
+        highest_eval_episode_reward = jnp.array(-jnp.inf)
+        best_params = (training_state.normalizer_params, training_state.params.policy)
         if self.num_evals > 1:
             metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.params.policy),
                                                training_metrics={})
@@ -338,6 +342,9 @@ class PPO:
             # Run evals.
             metrics = evaluator.run_evaluation((training_state.normalizer_params, training_state.params.policy),
                                                training_metrics)
+            if metrics['eval/episode_reward'] > highest_eval_episode_reward:
+                highest_eval_episode_reward = metrics['eval/episode_reward']
+                best_params = (training_state.normalizer_params, training_state.params.policy)
             if self.wandb_logging:
                 metrics = metrics_to_float(metrics)
                 wandb.log(metrics)
@@ -346,10 +353,15 @@ class PPO:
 
         total_steps = current_step
         # assert total_steps >= self.num_timesteps
-        params = (training_state.normalizer_params, training_state.params.policy)
+        last_params = (training_state.normalizer_params, training_state.params.policy)
+
+        if self.return_best_model:
+            params_to_return = best_params
+        else:
+            params_to_return = last_params
 
         # If there were no mistakes the training_state should still be identical on all
         # devices.
         if self.wandb_logging:
             wandb.log(metrics_to_float({'total steps': total_steps}))
-        return params, all_metrics
+        return params_to_return, all_metrics
