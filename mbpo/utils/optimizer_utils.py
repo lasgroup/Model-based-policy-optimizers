@@ -116,8 +116,11 @@ def rollout_policy(
     return transitions
 
 
-@partial(jax.jit, static_argnums=(3, 4))
-def lambda_return(reward: jax.Array, next_values: jax.Array, discount: float, lambda_: float):
+@partial(jax.jit, static_argnums=(2, 3))
+def lambda_return(reward: jax.Array,
+                  next_values: jax.Array,
+                  discount: float,
+                  lambda_: float):
     """Taken from https://github.com/danijar/dreamer/"""
     # Setting lambda=1 gives a discounted Monte Carlo return.
     # Setting lambda=0 gives a fixed 1-step return.
