@@ -10,9 +10,10 @@ import wandb
 from mbpo.optimizers.policy_optimizers.brax_optimizers import PPOOptimizer
 from mbpo.systems import PendulumSystem
 
+
 system = PendulumSystem()
 # Create replay buffer
-init_sys_state = system.reset(rng=0)
+init_sys_state = system.reset(rng=jr.PRNGKey(0))
 
 dummy_sample = Transition(observation=init_sys_state.x_next,
                           action=jnp.zeros(shape=(system.u_dim,)),
@@ -31,11 +32,10 @@ sampling_buffer_state = sampling_buffer.insert(sampling_buffer_state,
 # Create MBPO environment
 optimizer = PPOOptimizer(system=system,
                          true_buffer=sampling_buffer,
-                         dummy_true_buffer_state=sampling_buffer_state,
                          num_timesteps=1_000_000,
                          episode_length=200,
                          action_repeat=1,
-                         num_envs=16,
+                         num_envs=256,
                          num_eval_envs=1,
                          lr=3e-3,
                          wd=0,
@@ -43,9 +43,9 @@ optimizer = PPOOptimizer(system=system,
                          discounting=0.99,
                          seed=0,
                          unroll_length=40,
-                         batch_size=32,
+                         batch_size=128,
                          num_minibatches=32,
-                         num_updates_per_batch=4,
+                         num_updates_per_batch=8,
                          num_evals=20,
                          normalize_observations=True,
                          reward_scaling=1,
@@ -53,8 +53,8 @@ optimizer = PPOOptimizer(system=system,
                          gae_lambda=0.95,
                          deterministic_eval=True,
                          normalize_advantage=True,
-                         policy_hidden_layer_sizes=(128, 128, 128),
-                         critic_hidden_layer_sizes=(128, 128, 128),
+                         policy_hidden_layer_sizes=(64, 64),
+                         critic_hidden_layer_sizes=(64, 64),
                          wandb_logging=True,
                          )
 
