@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from functools import partial
-from typing import Tuple, NamedTuple, Generic
+from typing import Tuple, NamedTuple, List, Mapping, Generic
 
 import chex
 import jax
@@ -20,7 +20,7 @@ from mbpo.systems.dynamics.base_dynamics import DynamicsParams
 from mbpo.systems.rewards.base_rewards import RewardParams
 from mbpo.utils.optimizer_utils import rollout_actions
 from mbpo.utils.general_utils import powerlaw_psd_gaussian
-from mbpo.utils.type_aliases import OptimizerState
+from mbpo.utils.type_aliases import OptimizerState, OptimizerTrainingOutPut
 
 
 class iCemParams(NamedTuple):
@@ -68,6 +68,12 @@ class iCemOptimizerState(OptimizerState, Generic[DynamicsParams, RewardParams]):
     @property
     def action(self):
         return self.best_sequence[0]
+    
+
+@chex.dataclass
+class iCemTrainingOutput(OptimizerTrainingOutPut, Generic[DynamicsParams, RewardParams]):
+    optimizer_state: iCemOptimizerState[DynamicsParams, RewardParams]
+    summary: List[Mapping[str, jnp.ndarray]]
 
 
 class AbstractCost:
@@ -301,6 +307,13 @@ class iCEMOptimizer(BaseOptimizer):
         assert self.system is not None, "iCEM optimizer requires system to be defined."
         action, opt_state = self.agent.act(obs.reshape(-1,), opt_state, evaluate)
         return action.reshape(1, -1), opt_state
+    
+    def train(self,
+            opt_state: iCemOptimizerState) -> iCemTrainingOutput[
+            RewardParams, DynamicsParams]:
+        training_output: OptimizerTrainingOutPut = super().train(opt_state)
+        metrics: List = []
+        return iCemTrainingOutput(optimizer_state=training_output.optimizer_state, summary=metrics)
 
 
 if __name__ == "__main__":
