@@ -20,6 +20,10 @@ class BaseOptimizer(ABC, Generic[RewardParams, DynamicsParams]):
     def set_system(self, system: System):
         self.system = system
 
+    @property
+    def can_act_in_batches(self):
+        return True
+
     @abstractmethod
     def act(self,
             obs: chex.Array,
