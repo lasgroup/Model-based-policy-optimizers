@@ -131,10 +131,6 @@ class iCemTO(BaseOptimizer, Generic[DynamicsParams, RewardParams]):
             key=key,
         )
 
-    @property
-    def can_act_in_batches(self):
-        return False
-
     @partial(jax.jit, static_argnums=0)
     def optimize(
             self,
@@ -282,6 +278,10 @@ class iCEMOptimizer(BaseOptimizer):
 
     def set_system(self, system: System):
         super().set_system(system)
+
+    @property
+    def can_act_in_batches(self):
+        return False
 
     def init(self,
              key: chex.PRNGKey,
