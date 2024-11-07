@@ -10,12 +10,11 @@ import numpy as np
 
 from jax import vmap, jit
 from jax.nn import relu
-from jax.numpy import sqrt, newaxis
-from jax.numpy.fft import irfft, rfftfreq
+from brax.training.replay_buffers import ReplayBufferState
 from jaxtyping import Float, Array, Key, Scalar
 
 from mbpo.optimizers.base_optimizer import BaseOptimizer
-from mbpo.systems.base_systems import System, SystemParams
+from mbpo.systems.base_systems import System
 from mbpo.systems.dynamics.base_dynamics import DynamicsParams
 from mbpo.systems.rewards.base_rewards import RewardParams
 from mbpo.utils.optimizer_utils import rollout_actions
@@ -119,7 +118,7 @@ class iCemTO(BaseOptimizer, Generic[DynamicsParams, RewardParams]):
         else:
             self.summarize_cost_samples = jnp.mean
 
-    def init(self, key: chex.Array) -> iCemOptimizerState:
+    def init(self, key: chex.Array, true_buffer_state: ReplayBufferState | None = None) -> iCemOptimizerState:
         assert self.system is not None, "iCem optimizer requires system to be defined."
         init_key, dummy_buffer_key, key = jax.random.split(key, 3)
         system_params = self.system.init_params(init_key)
@@ -279,6 +278,10 @@ class iCEMOptimizer(BaseOptimizer):
 
     def set_system(self, system: System):
         super().set_system(system)
+
+    @property
+    def can_act_in_batches(self):
+        return False
 
     def init(self,
              key: chex.PRNGKey,
