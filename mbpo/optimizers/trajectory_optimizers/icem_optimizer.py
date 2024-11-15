@@ -97,8 +97,8 @@ class iCemTO(BaseOptimizer, Generic[DynamicsParams, RewardParams]):
                  key: chex.PRNGKey = jax.random.PRNGKey(0),
                  opt_params: iCemParams = iCemParams(),
                  cost_fn: AbstractCost | None = None,
-                 use_optimism: bool = True,
-                 use_pessimism: bool = True,
+                 use_optimism: bool = False,
+                 use_pessimism: bool = False,
                  *args,
                  **kwargs):
         super().__init__(*args, **kwargs)
